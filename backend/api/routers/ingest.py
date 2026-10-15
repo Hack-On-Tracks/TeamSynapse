@@ -49,19 +49,19 @@ async def upload_file(file: UploadFile = File(...), token: dict = Depends(decode
         raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {e}")
 
     table_name = file.filename.rsplit(".", 1)[0] if file.filename else "uploaded_data"
-    save_processed(df, table_name=table_name)
     storage = DuckDBStorage()
     try:
-        storage.insert_dataframe(df, table_name=table_name)
+        from ...ingestion.ingestion_service import TelemetryIngestionService
+        service = TelemetryIngestionService(storage=storage)
+        ingest_report = service.ingest_dataframe(df, table_name=table_name, source_type="browser_upload")
+        return {
+            "message": f"Successfully uploaded {file.filename} (accepted: {ingest_report['accepted_records']}, quarantined: {ingest_report['quarantined_records']})",
+            "table_name": table_name,
+            "rows": ingest_report["accepted_records"],
+            "columns": ingest_report["columns"],
+        }
     finally:
         storage.close()
-
-    return {
-        "message": f"Successfully uploaded {file.filename}",
-        "table_name": table_name,
-        "rows": len(df),
-        "columns": df.columns.tolist(),
-    }
 
 @router.get("/table/{table_name}")
 def get_table_data(

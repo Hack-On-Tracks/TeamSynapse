@@ -21,6 +21,14 @@ run-backend:
 run-frontend:
 	$(PYTHON) -m streamlit run frontend/dashboard/app.py
 
+# Run React Cytoscape graph simulator on port 5173
+run-graph:
+	cd frontend/graph-app && npm run dev
+
+# Run all services via unified launcher
+run-all:
+	$(PYTHON) run.py
+
 # Run all test suites
 test:
 	$(PYTHON) -m pytest tests -v

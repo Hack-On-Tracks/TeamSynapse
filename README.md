@@ -107,6 +107,18 @@ Open `http://localhost:8501` in your browser.
 | `GET`  | `/score/scores` | Query composite risk scores with filters |
 | `GET`  | `/score/cases` | Query prioritized investigation cases |
 | `POST` | `/score/case/{id}/status` | Update triage case status |
+| `POST` | `/sim/generate` | Generate reproducible synthetic telemetry (CSV, Parquet, JSON) |
+| `GET`  | `/sim/scenarios` | List 15 enterprise attack & benign lookalike scenarios |
+| `GET`  | `/sim/manifest` | Retrieve cryptographic dataset manifest & hashes |
+| `POST` | `/sim/ingest-synthetic` | Generate and directly ingest synthetic flows to DuckDB |
+| `GET`  | `/graph/summary` | Aggregate node, edge, and density statistics |
+| `GET`  | `/graph/elements` | Cytoscape.js serialized graph nodes and aggregated edges |
+| `GET`  | `/graph/nodes` | Entity nodes with behavioral risk metrics |
+| `GET`  | `/graph/edges` | Aggregated flow connections between entities |
+| `GET`  | `/graph/timeline` | Time-binned flow counts for scrubber timeline |
+| `GET`  | `/graph/entity/{id}` | Click-to-investigate deep profile with peer baseline comparison |
+| `POST` | `/graph/replay` | Initialize deterministic temporal replay session |
+| `GET`  | `/graph/replay/{id}` | Fetch frame snapshot for timeline replay session |
 | `POST` | `/genai/generate` | Query Ollama LLM with deterministic fallback |
 
 ---
@@ -117,33 +129,57 @@ Open `http://localhost:8501` in your browser.
 CipherSentinel/
 ├── backend/
 │   ├── api/
-│   │   ├── main.py               # FastAPI application entrypoint
+│   │   ├── main.py               # FastAPI application entrypoint (port 8000)
 │   │   └── routers/
 │   │       ├── auth.py           # Database-backed JWT auth & audit logs
-│   │       ├── ingest.py         # CSV upload & table retrieval
+│   │       ├── ingest.py         # CSV upload, quarantine & normalization
 │   │       ├── detect.py         # Isolation Forest anomaly detection
 │   │       ├── score.py          # Cross-table risk scoring & case triage
+│   │       ├── sim.py            # Synthetic telemetry generator & scenario API
+│   │       ├── graph.py          # Temporal graph, Cytoscape serializer & replay API
 │   │       └── genai.py          # Grounded GenAI Ollama integration
 │   ├── auth/
 │   │   ├── auth.py               # JWT helper utilities & token validation
 │   │   └── users_db.py           # DuckDB user store & PBKDF2 hasher
+│   ├── graph/
+│   │   └── graph_service.py      # Network graph aggregation & temporal timeline service
+│   ├── sim/
+│   │   └── synthetic_generator.py# 15-scenario synthetic telemetry generator & manifest
+│   ├── ingestion/
+│   │   ├── ingest.py             # Parquet storage & CSV reader
+│   │   └── ingestion_service.py  # Ingestion validation, quarantine & UTC normalization
 │   ├── scoring/
 │   │   └── aggregator.py         # Cross-table multi-source threat fusion
 │   ├── detectors/
 │   │   └── detector.py           # Scikit-Learn IsolationForest detector
 │   ├── features/
 │   │   └── feature_engineering.py# Temporal and behavioral feature builder
-│   ├── ingestion/
-│   │   └── ingest.py             # Parquet storage & CSV reader
 │   └── storage/
-│       └── storage.py            # DuckDB SQL database interface
+│       ├── storage.py            # Thread-safe DuckDB SQL database interface
+│       └── identity_vault.py     # Fernet-encrypted identity pseudonymization vault
 ├── frontend/
-│   └── dashboard/
-│       └── app.py                # Full Streamlit SOC command center
+│   ├── dashboard/
+│   │   └── app.py                # Full Streamlit SOC command center (port 8501)
+│   └── graph-app/                # React + Cytoscape.js Graph Simulator (port 5173)
+│       ├── src/
+│       │   ├── components/
+│       │   │   ├── CytoscapeGraph.tsx      # Dark SOC Cytoscape network canvas
+│       │   │   ├── InvestigationDrawer.tsx # Click-to-investigate drawer
+│       │   │   ├── ReplayController.tsx    # Play/pause/scrub timeline dock
+│       │   │   ├── ScenarioLabView.tsx     # What-If scenario simulation lab
+│       │   │   ├── ThreatCasesView.tsx     # Case triage and status lifecycle
+│       │   │   ├── EvaluationLabView.tsx   # Multi-model evaluation benchmark
+│       │   │   └── ThreatHuntingView.tsx   # Parameterized query builder
+│       │   ├── App.tsx                     # Top navigation & view orchestrator
+│       │   └── index.css                   # Dark SOC design system & CSS variables
+│       └── package.json
 ├── tests/
 │   ├── test_auth.py              # User authentication & PBKDF2 tests
 │   ├── test_scoring.py           # Cross-table scoring aggregation tests
-│   └── test_integration_flow.py  # End-to-end API & pipeline integration test
+│   ├── test_integration_flow.py  # End-to-end API & pipeline integration test
+│   ├── test_synthetic_generator.py # 15-scenario synthetic generator & manifest tests
+│   └── test_graph_api.py         # Backend graph endpoints & Cytoscape serialization tests
+├── run.py                        # Unified launcher for API, Streamlit & React Graph
 ├── Makefile                      # Standard developer workflow commands
 ├── pyproject.toml                # Project metadata & pytest configuration
 ├── requirements.txt              # Core Python dependencies

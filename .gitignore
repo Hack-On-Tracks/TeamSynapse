@@ -58,3 +58,10 @@ data/features/
 # Secrets
 *.pem
 *.key
+
+# Node / Frontend
+node_modules/
+frontend/graph-app/dist/
+frontend/graph-app/node_modules/
+.npm/
+

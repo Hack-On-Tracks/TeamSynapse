@@ -88,14 +88,31 @@ def main():
         env=env,
     )
 
+    # 3. Start React Cytoscape Graph Simulator (port 5173)
+    graph_proc = None
+    graph_dir = ROOT_DIR / "frontend" / "graph-app"
+    if (graph_dir / "package.json").exists():
+        print("\n[3/3] Launching React Graph Simulator on http://localhost:5173 ...")
+        npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
+        try:
+            graph_proc = subprocess.Popen(
+                [npm_cmd, "run", "dev"],
+                cwd=str(graph_dir),
+                shell=(sys.platform == "win32"),
+            )
+            print("  -> React Graph Simulator is starting on http://localhost:5173")
+        except Exception as e:
+            print(f"  -> React Graph skipped ({e}); launch manually via 'npm run dev' in frontend/graph-app")
+
     print("\n" + "=" * 65)
     print("🚀 CIPHERSENTINEL IS LIVE!")
-    print("   • SOC Dashboard:  http://localhost:8501")
-    print("   • REST API:       http://127.0.0.1:8000")
-    print("   • API Docs:       http://127.0.0.1:8000/docs")
-    print("   • Default Login:  admin / admin123")
+    print("   • Graph Simulator: http://localhost:5173")
+    print("   • SOC Dashboard:   http://localhost:8501")
+    print("   • REST API:        http://127.0.0.1:8000")
+    print("   • API Docs:        http://127.0.0.1:8000/docs")
+    print("   • Default Login:   admin / admin123")
     print("=" * 65)
-    print("Press Ctrl+C to stop both servers.\n")
+    print("Press Ctrl+C to stop all servers.\n")
 
     try:
         # Keep launcher alive and monitor processes
@@ -110,7 +127,8 @@ def main():
     except KeyboardInterrupt:
         print("\n[*] Shutting down CipherSentinel services...")
     finally:
-        for proc in [backend_proc, frontend_proc]:
+        procs = [p for p in [backend_proc, frontend_proc, graph_proc] if p is not None]
+        for proc in procs:
             try:
                 proc.terminate()
                 proc.wait(timeout=3)
