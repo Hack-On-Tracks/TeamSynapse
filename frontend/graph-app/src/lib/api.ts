@@ -160,3 +160,94 @@ export async function runModelPredict(records?: any[], tableName?: string): Prom
   }
   return null;
 }
+
+// ---------------------------------------------------------------------
+// Multi-Layer Consensus & Zero False-Opposite Types & API
+// ---------------------------------------------------------------------
+
+export interface RuleLayerResult {
+  entity_id: string;
+  rule_score: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  rules_triggered: string[];
+  rule_count: number;
+  sub_volume: number;
+  sub_novelty: number;
+  sub_timing: number;
+  sub_auth: number;
+  sub_dns: number;
+  primary_rule_indicator: string;
+}
+
+export interface MLDeviation {
+  feature: string;
+  z_deviation: number;
+}
+
+export interface MLLayerResult {
+  entity_id: string;
+  model_type: string;
+  ml_score: number;
+  is_anomaly: boolean;
+  decision_status: 'OUTLIER' | 'INLIER';
+  top_deviations: MLDeviation[];
+  raw_contamination: number;
+}
+
+export interface OllamaLayerResult {
+  entity_id: string;
+  model: string;
+  verdict: 'CONFIRMED_THREAT' | 'LIKELY_FALSE_POSITIVE' | 'SUSPICIOUS_INVESTIGATE' | 'BENIGN_OPERATION';
+  confidence: number;
+  rationale: string;
+  thinking?: string;
+  is_live_call?: boolean;
+}
+
+export interface ConsensusRecord {
+  entity_id: string;
+  rule_layer: RuleLayerResult;
+  ml_layer: MLLayerResult;
+  ollama_layer: OllamaLayerResult;
+  consensus_status: string;
+  is_false_opposite: boolean;
+  false_opposite_type: string;
+  final_calibrated_risk: number;
+  final_severity: string;
+  recommended_action: string;
+  consensus_explanation: string;
+}
+
+import defaultConsensusData from './consensus-data.json';
+
+export async function fetchConsensusScores(liveOllama: boolean = false): Promise<ConsensusRecord[]> {
+  try {
+    const res = await fetch(`${API_BASE}/score/consensus?live_ollama=${liveOllama}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data as ConsensusRecord[];
+      }
+    }
+  } catch {
+    // Backend offline or error -> fallback to curated multi-engine dataset
+  }
+  return defaultConsensusData as ConsensusRecord[];
+}
+
+export async function runLiveOllamaVerify(entityId: string, indicators: any): Promise<OllamaLayerResult | null> {
+  try {
+    const res = await fetch(`${API_BASE}/genai/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entity_id: entityId, indicators }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+  return null;
+}
+

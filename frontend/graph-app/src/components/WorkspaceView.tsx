@@ -28,13 +28,13 @@ import {
   Zap,
   BarChart3,
   RefreshCw,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { TrafficChart } from '@/components/traffic-chart';
-import { NetworkFlows, RelatedFlows, useFlowStream } from '@/components/network-flows';
-import { demoCases, downloadEvidence, type CaseRecord, type FlowRecord } from '@/lib/demo-cases';
-import { fetchLiveCases, updateCaseStatus, fetchGraphSummary, fetchAuditLogs, type GraphSummary, type AuditLogEntry } from '@/lib/api';
+} from '../icons';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
+import { TrafficChart } from './traffic-chart';
+import { NetworkFlows, RelatedFlows, useFlowStream } from './network-flows';
+import { demoCases, downloadEvidence, type CaseRecord, type FlowRecord } from '../lib/demo-cases';
+import { fetchLiveCases, updateCaseStatus, fetchGraphSummary, fetchAuditLogs, type GraphSummary, type AuditLogEntry } from '../lib/api';
 
 import { CytoscapeGraph } from './CytoscapeGraph';
 import { InvestigationDrawer } from './InvestigationDrawer';
@@ -42,6 +42,7 @@ import { ReplayController } from './ReplayController';
 import { ScenarioLabView } from './ScenarioLabView';
 import { EvaluationLabView } from './EvaluationLabView';
 import { ThreatHuntingView } from './ThreatHuntingView';
+import { InvestigationMultiLayerEngine } from './InvestigationMultiLayerEngine';
 
 export type WorkspaceTab =
   | 'Overview'
@@ -78,6 +79,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   const [message, setMessage] = useState('');
   const [info, setInfo] = useState<'notifications' | 'help' | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [showCaseArchive, setShowCaseArchive] = useState<boolean>(false);
 
   // Cytoscape selection & replay states
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
@@ -485,97 +487,124 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
           {/* VIEW: INVESTIGATIONS */}
           {view === 'Investigations' && (
             <div className="space-y-6">
-              <div className="queue">
-                <div className="queue-toolbar">
-                  <div className="filter-tabs">
-                    {['ALL', 'Open', 'Investigating', 'Confirmed', 'Dismissed'].map(st => (
-                      <button
-                        key={st}
-                        type="button"
-                        className={`filter cursor-pointer rounded px-2.5 py-1 text-xs border border-transparent ${
-                          filterStatus === st ? 'selected bg-secondary font-semibold' : 'text-muted-foreground hover:bg-muted'
-                        }`}
-                        onClick={() => setFilterStatus(st)}
-                      >
-                        {st}
-                      </button>
-                    ))}
+              {/* 4 SUBTABS MULTI-LAYER INVESTIGATION ENGINE */}
+              <InvestigationMultiLayerEngine
+                onSelectCase={caseId => {
+                  openCase(caseId);
+                }}
+              />
+
+              {/* Collapsible Flat SOC Case Queue */}
+              <div className="border border-[#1e2d4d] rounded-xl bg-[#0b152b] overflow-hidden">
+                <div
+                  className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-[#111f3d] transition-colors"
+                  onClick={() => setShowCaseArchive(!showCaseArchive)}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="w-4 h-4 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-300">
+                      Standard SOC Investigation Case Files Queue ({cases.length} Total Records)
+                    </span>
                   </div>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400">
+                    {showCaseArchive ? 'Collapse Case Table' : 'Expand Case Table'}
+                  </Button>
                 </div>
 
-                <div className="table-scroll">
-                  <table className="case-table">
-                    <thead>
-                      <tr>
-                        <th>Case ID</th>
-                        <th>User / Entity</th>
-                        <th>Investigation Title</th>
-                        <th>Destination</th>
-                        <th>Pattern</th>
-                        <th>Risk Score</th>
-                        <th>Confidence</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredCases.map(c => (
-                        <tr
-                          key={c.id}
-                          onClick={() => {
-                            setSelectedCase(c);
-                            setNote(c.analystNote ?? '');
-                          }}
-                        >
-                          <td className="font-mono font-semibold">{c.id}</td>
-                          <td className="font-semibold">{c.user}</td>
-                          <td>
-                            <div className="case-cell-title">{c.title}</div>
-                            <div className="case-cell-sub">
-                              {c.team} · {c.category}
-                            </div>
-                          </td>
-                          <td className="font-mono text-xs">{c.destination}</td>
-                          <td>{c.pattern}</td>
-                          <td>
-                            <div className="risk-cell">
-                              <span>{c.risk}</span>
-                              <div
-                                className={`risk-track ${
-                                  c.risk >= 70 ? 'high' : c.risk >= 40 ? 'medium' : 'low'
-                                }`}
-                              >
-                                <progress max={100} value={c.risk} />
-                              </div>
-                            </div>
-                          </td>
-                          <td>{c.confidence}%</td>
-                          <td>
-                            <span
-                              className={`severity ${
-                                c.status === 'Confirmed'
-                                  ? 'high'
-                                  : c.status === 'Investigating'
-                                  ? 'medium'
-                                  : 'low'
-                              }`}
+                {showCaseArchive && (
+                  <div className="p-4 border-t border-[#1e2d4d] bg-[#060b17]">
+                    <div className="queue-toolbar mb-4">
+                      <div className="filter-tabs">
+                        {['ALL', 'Open', 'Investigating', 'Confirmed', 'Dismissed'].map(st => (
+                          <button
+                            key={st}
+                            type="button"
+                            className={`filter cursor-pointer rounded px-2.5 py-1 text-xs border border-transparent ${
+                              filterStatus === st ? 'selected bg-secondary font-semibold' : 'text-muted-foreground hover:bg-muted'
+                            }`}
+                            onClick={() => setFilterStatus(st)}
+                          >
+                            {st}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="table-scroll">
+                      <table className="case-table">
+                        <thead>
+                          <tr>
+                            <th>Case ID</th>
+                            <th>User / Entity</th>
+                            <th>Investigation Title</th>
+                            <th>Destination</th>
+                            <th>Pattern</th>
+                            <th>Risk Score</th>
+                            <th>Confidence</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCases.map(c => (
+                            <tr
+                              key={c.id}
+                              onClick={() => {
+                                setSelectedCase(c);
+                                setNote(c.analystNote ?? '');
+                              }}
                             >
-                              {c.status}
-                            </span>
-                          </td>
-                          <td>
-                            <Button size="sm" variant="outline">
-                              Review
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {filteredCases.length === 0 && (
-                    <div className="empty-state">No investigations match this status filter.</div>
-                  )}
-                </div>
+                              <td className="font-mono font-semibold">{c.id}</td>
+                              <td className="font-semibold">{c.user}</td>
+                              <td>
+                                <div className="case-cell-title">{c.title}</div>
+                                <div className="case-cell-sub">
+                                  {c.team} · {c.category}
+                                </div>
+                              </td>
+                              <td className="font-mono text-xs">{c.destination}</td>
+                              <td>{c.pattern}</td>
+                              <td>
+                                <div className="risk-cell">
+                                  <span>{c.risk}</span>
+                                  <div
+                                    className={`risk-track ${
+                                      c.risk >= 70 ? 'high' : c.risk >= 40 ? 'medium' : 'low'
+                                    }`}
+                                  >
+                                    <progress max={100} value={c.risk} />
+                                  </div>
+                                </div>
+                              </td>
+                              <td>{c.confidence}%</td>
+                              <td>
+                                <span
+                                  className={`severity ${
+                                    c.status === 'Confirmed'
+                                      ? 'high'
+                                      : c.status === 'Investigating'
+                                      ? 'medium'
+                                      : 'low'
+                                    }`}
+                                >
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td>
+                                <Button size="sm" variant="outline">
+                                  Review
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredCases.length === 0 && (
+                        <div className="empty-state">No investigations match this status filter.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Related Network Flows Component */}

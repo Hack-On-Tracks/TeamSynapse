@@ -15,13 +15,16 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent
 
 # Locate Python executable inside virtual environment if present
-VENV_PYTHON = ROOT_DIR / ".venv" / "Scripts" / "python.exe"
-if not VENV_PYTHON.exists():
+if sys.platform == "win32":
+    VENV_PYTHON = ROOT_DIR / ".venv" / "Scripts" / "python.exe"
+else:
     VENV_PYTHON = ROOT_DIR / ".venv" / "bin" / "python"
+
 if not VENV_PYTHON.exists():
     PYTHON_EXE = sys.executable
 else:
     PYTHON_EXE = str(VENV_PYTHON)
+
 
 
 def check_api_ready(timeout=10):

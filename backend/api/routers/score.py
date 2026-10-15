@@ -141,3 +141,35 @@ def update_case_status(
         }
     finally:
         storage.close()
+
+
+@router.get("/consensus")
+def get_consensus_scores(limit: int = 50, live_ollama: bool = False, token: dict = Depends(decode_access_token)):
+    """Retrieve full 4-stage consensus scores reconciling Rules, Scratch ML, and Ollama LLM."""
+    storage = DuckDBStorage()
+    try:
+        from ...scoring.consensus import ConsensusEngine
+        engine = ConsensusEngine(storage=storage)
+        return engine.run_all_consensus(limit=limit, live_ollama=live_ollama)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Consensus error: {type(e).__name__}: {str(e)}")
+    finally:
+        storage.close()
+
+
+@router.get("/consensus/entity/{entity_id}")
+def get_entity_consensus(entity_id: str, live_ollama: bool = False, token: dict = Depends(decode_access_token)):
+    """Run real-time multi-layer consensus evaluation on a specific entity."""
+    storage = DuckDBStorage()
+    try:
+        from ...scoring.consensus import ConsensusEngine
+        engine = ConsensusEngine(storage=storage)
+        rows = storage.query("SELECT * FROM threat_scores WHERE entity_id = ?", (entity_id,))
+        if rows.empty:
+            raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+        return engine.evaluate_consensus(entity_id, rows.iloc[0].to_dict(), live_ollama=live_ollama)
+    finally:
+        storage.close()
+

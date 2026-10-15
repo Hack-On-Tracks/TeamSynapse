@@ -1,0 +1,557 @@
+[
+  {
+    "entity_id": "EMP006",
+    "rule_layer": {
+      "entity_id": "EMP006",
+      "rule_score": 83.75,
+      "severity": "CRITICAL",
+      "rules_triggered": [
+        "R1_VOLUME_SPIKE (High Byte Egress)",
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)",
+        "R4_AUTH_FAILURE (Kerberos / Credential Anomaly)"
+      ],
+      "rule_count": 4,
+      "sub_volume": 1.0,
+      "sub_novelty": 0.55,
+      "sub_timing": 1.0,
+      "sub_auth": 1.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R1_VOLUME_SPIKE (High Byte Egress)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP006",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 53.4,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "bytes_out_per_flow",
+          "z_deviation": 3.82
+        },
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        },
+        {
+          "feature": "peer_dev_after_hours",
+          "z_deviation": 4.1
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP006",
+      "model": "qwen3:4b",
+      "verdict": "CONFIRMED_THREAT",
+      "confidence": 96.0,
+      "rationale": "Confirmed malicious insider threat: 3 consecutive failed Kerberos authentications followed by 550MB transfer to unseen foreign IP at 02:30 AM. Compromised / targeted asset: Confidential Q3 Earnings & Board Meeting Minutes.",
+      "thinking": "Evaluating threat indicators for EMP006 (Senior Financial Controller)...\nSuspicious transfer observed outside working hours to non-standard endpoint.\nMitre mapping: T1048.003 - Exfiltration Over Alternative Protocol.\nConclusion: Severe exfiltration signal with zero operational justification. Urgent mitigation required.",
+      "is_live_call": false
+    },
+    "consensus_status": "CONFIRMED_THREAT",
+    "is_false_opposite": false,
+    "false_opposite_type": "None (Corroborated Threat)",
+    "final_calibrated_risk": 88.7,
+    "final_severity": "CRITICAL",
+    "recommended_action": "IMMEDIATE HOST ISOLATION & TICKET OPEN",
+    "consensus_explanation": "Corroborated by all 3 layers: Rule Engine (CRITICAL), Scratch ML Model (OUTLIER), and Ollama Qwen3:4b (96.0% Confirmed). Target: Confirmed malicious insider threat: 3 consecutive failed Kerberos authentications followed by 550MB transfer to unseen foreign IP at 02:30 AM. Compromised / targeted asset: Confidential Q3 Earnings & Board Meeting Minutes."
+  },
+  {
+    "entity_id": "EMP001",
+    "rule_layer": {
+      "entity_id": "EMP001",
+      "rule_score": 67.31,
+      "severity": "CRITICAL",
+      "rules_triggered": [
+        "R1_VOLUME_SPIKE (High Byte Egress)",
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 3,
+      "sub_volume": 1.0,
+      "sub_novelty": 0.559,
+      "sub_timing": 0.917,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R1_VOLUME_SPIKE (High Byte Egress)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP001",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 55.9,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "bytes_out_per_flow",
+          "z_deviation": 3.82
+        },
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP001",
+      "model": "qwen3:4b",
+      "verdict": "CONFIRMED_THREAT",
+      "confidence": 96.0,
+      "rationale": "Confirmed malicious insider threat: Massive repository git bundle export (1.2GB) to unlisted personal Mega.nz endpoint during off-hours. Compromised / targeted asset: Proprietary Source Code & API Keys.",
+      "thinking": "Evaluating threat indicators for EMP001 (Core Backend Developer)...\nSuspicious transfer observed outside working hours to non-standard endpoint.\nMitre mapping: T1567 - Exfiltration Over Web Service.\nConclusion: Severe exfiltration signal with zero operational justification. Urgent mitigation required.",
+      "is_live_call": false
+    },
+    "consensus_status": "CONFIRMED_THREAT",
+    "is_false_opposite": false,
+    "false_opposite_type": "None (Corroborated Threat)",
+    "final_calibrated_risk": 78.8,
+    "final_severity": "HIGH",
+    "recommended_action": "IMMEDIATE HOST ISOLATION & TICKET OPEN",
+    "consensus_explanation": "Corroborated by all 3 layers: Rule Engine (CRITICAL), Scratch ML Model (OUTLIER), and Ollama Qwen3:4b (96.0% Confirmed). Target: Confirmed malicious insider threat: Massive repository git bundle export (1.2GB) to unlisted personal Mega.nz endpoint during off-hours. Compromised / targeted asset: Proprietary Source Code & API Keys."
+  },
+  {
+    "entity_id": "EMP002",
+    "rule_layer": {
+      "entity_id": "EMP002",
+      "rule_score": 69.15,
+      "severity": "CRITICAL",
+      "rules_triggered": [
+        "R1_VOLUME_SPIKE (High Byte Egress)",
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 3,
+      "sub_volume": 1.0,
+      "sub_novelty": 0.566,
+      "sub_timing": 1.0,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R1_VOLUME_SPIKE (High Byte Egress)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP002",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 56.6,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "bytes_out_per_flow",
+          "z_deviation": 3.82
+        },
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP002",
+      "model": "qwen3:4b",
+      "verdict": "CONFIRMED_THREAT",
+      "confidence": 96.0,
+      "rationale": "Confirmed malicious insider threat: Bulk export of entire Salesforce customer database (450MB) right after off-boarding notification. Compromised / targeted asset: Customer PII & Sales Leads.",
+      "thinking": "Evaluating threat indicators for EMP002 (Sales Operations Manager)...\nSuspicious transfer observed outside working hours to non-standard endpoint.\nMitre mapping: T1567 - Exfiltration Over Web Service.\nConclusion: Severe exfiltration signal with zero operational justification. Urgent mitigation required.",
+      "is_live_call": false
+    },
+    "consensus_status": "CONFIRMED_THREAT",
+    "is_false_opposite": false,
+    "false_opposite_type": "None (Corroborated Threat)",
+    "final_calibrated_risk": 79.9,
+    "final_severity": "HIGH",
+    "recommended_action": "IMMEDIATE HOST ISOLATION & TICKET OPEN",
+    "consensus_explanation": "Corroborated by all 3 layers: Rule Engine (CRITICAL), Scratch ML Model (OUTLIER), and Ollama Qwen3:4b (96.0% Confirmed). Target: Confirmed malicious insider threat: Bulk export of entire Salesforce customer database (450MB) right after off-boarding notification. Compromised / targeted asset: Customer PII & Sales Leads."
+  },
+  {
+    "entity_id": "EMP003",
+    "rule_layer": {
+      "entity_id": "EMP003",
+      "rule_score": 45.94,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.452,
+      "sub_novelty": 0.568,
+      "sub_timing": 0.796,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP003",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 56.8,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP003",
+      "model": "qwen3:4b",
+      "verdict": "BENIGN_OPERATION",
+      "confidence": 84.0,
+      "rationale": "Minor deviation consistent with normal developer or operational workflow. No exfiltration indicators.",
+      "thinking": "Low volume transfer to standard SaaS service. Traffic characteristics align with standard peer baseline.",
+      "is_live_call": false
+    },
+    "consensus_status": "SUSPICIOUS_REVIEW",
+    "is_false_opposite": false,
+    "false_opposite_type": "Discrepancy Under Review",
+    "final_calibrated_risk": 61.2,
+    "final_severity": "MEDIUM",
+    "recommended_action": "ANALYST INVESTIGATION QUEUE",
+    "consensus_explanation": "Partial consensus: Rule Score 45.94%, ML Score 56.8%, Ollama Verdict: BENIGN_OPERATION. Queued for human verification."
+  },
+  {
+    "entity_id": "EMP004",
+    "rule_layer": {
+      "entity_id": "EMP004",
+      "rule_score": 49.04,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.431,
+      "sub_novelty": 0.558,
+      "sub_timing": 1.0,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP004",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 55.8,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP004",
+      "model": "qwen3:4b",
+      "verdict": "SUSPICIOUS_INVESTIGATE",
+      "confidence": 76.0,
+      "rationale": "Anomalous off-hours transfer pattern without registered backup schedule. SOC investigation recommended.",
+      "thinking": "Entity exhibits elevated off-hours volume. While no auth failures occurred, pattern diverges from team median.",
+      "is_live_call": false
+    },
+    "consensus_status": "SUSPICIOUS_REVIEW",
+    "is_false_opposite": false,
+    "false_opposite_type": "Discrepancy Under Review",
+    "final_calibrated_risk": 59.5,
+    "final_severity": "MEDIUM",
+    "recommended_action": "ANALYST INVESTIGATION QUEUE",
+    "consensus_explanation": "Partial consensus: Rule Score 49.04%, ML Score 55.8%, Ollama Verdict: SUSPICIOUS_INVESTIGATE. Queued for human verification."
+  },
+  {
+    "entity_id": "EMP007",
+    "rule_layer": {
+      "entity_id": "EMP007",
+      "rule_score": 42.73,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.281,
+      "sub_novelty": 0.552,
+      "sub_timing": 0.955,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP007",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 55.2,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP007",
+      "model": "qwen3:4b",
+      "verdict": "BENIGN_OPERATION",
+      "confidence": 84.0,
+      "rationale": "Minor deviation consistent with normal developer or operational workflow. No exfiltration indicators.",
+      "thinking": "Low volume transfer to standard SaaS service. Traffic characteristics align with standard peer baseline.",
+      "is_live_call": false
+    },
+    "consensus_status": "SUSPICIOUS_REVIEW",
+    "is_false_opposite": false,
+    "false_opposite_type": "Discrepancy Under Review",
+    "final_calibrated_risk": 59.5,
+    "final_severity": "MEDIUM",
+    "recommended_action": "ANALYST INVESTIGATION QUEUE",
+    "consensus_explanation": "Partial consensus: Rule Score 42.73%, ML Score 55.2%, Ollama Verdict: BENIGN_OPERATION. Queued for human verification."
+  },
+  {
+    "entity_id": "EMP009",
+    "rule_layer": {
+      "entity_id": "EMP009",
+      "rule_score": 47.3,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.375,
+      "sub_novelty": 0.567,
+      "sub_timing": 1.0,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP009",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 56.7,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP009",
+      "model": "qwen3:4b",
+      "verdict": "BENIGN_OPERATION",
+      "confidence": 84.0,
+      "rationale": "Minor deviation consistent with normal developer or operational workflow. No exfiltration indicators.",
+      "thinking": "Low volume transfer to standard SaaS service. Traffic characteristics align with standard peer baseline.",
+      "is_live_call": false
+    },
+    "consensus_status": "SUSPICIOUS_REVIEW",
+    "is_false_opposite": false,
+    "false_opposite_type": "Discrepancy Under Review",
+    "final_calibrated_risk": 61.6,
+    "final_severity": "MEDIUM",
+    "recommended_action": "ANALYST INVESTIGATION QUEUE",
+    "consensus_explanation": "Partial consensus: Rule Score 47.3%, ML Score 56.7%, Ollama Verdict: BENIGN_OPERATION. Queued for human verification."
+  },
+  {
+    "entity_id": "EMP010",
+    "rule_layer": {
+      "entity_id": "EMP010",
+      "rule_score": 45.28,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.316,
+      "sub_novelty": 0.569,
+      "sub_timing": 1.0,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP010",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 56.9,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP010",
+      "model": "qwen3:4b",
+      "verdict": "LIKELY_FALSE_POSITIVE",
+      "confidence": 92.0,
+      "rationale": "Activity verified as legitimate business operation: Zendesk Global Ticket Archive Sync by Customer Support Lead (Support) to SaaS CRM Integration during approved scheduled window Shift Rotation.",
+      "thinking": "Checking contextual telemetry for EMP010...\nUser matches department Support with authorized task 'Zendesk Global Ticket Archive Sync'.\nHigh volume is expected for database replication. Destination SaaS CRM Integration is allowlisted.\nConclusion: High volume is not malicious exfiltration; this is an operational false alarm.",
+      "is_live_call": false
+    },
+    "consensus_status": "FALSE_OPPOSITE_ELIMINATED",
+    "is_false_opposite": true,
+    "false_opposite_type": "False Positive Suppressed",
+    "final_calibrated_risk": 11.3,
+    "final_severity": "LOW",
+    "recommended_action": "CLEAR / ADD TO EXCLUSION LIST",
+    "consensus_explanation": "Base detectors triggered alert (R2_NOVEL_DEST (First-Seen Destination) & ML Score 56.9%), but Ollama Verification confirmed authorized operational task (Activity verified as legitimate business operation: Zendesk Global Ticket Archive Sync by Customer Support Lead (Support) to SaaS CRM Integration during approved scheduled window Shift Rotation.). False opposite successfully eliminated!"
+  },
+  {
+    "entity_id": "EMP005",
+    "rule_layer": {
+      "entity_id": "EMP005",
+      "rule_score": 40.77,
+      "severity": "HIGH",
+      "rules_triggered": [
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 2,
+      "sub_volume": 0.351,
+      "sub_novelty": 0.553,
+      "sub_timing": 0.733,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R2_NOVEL_DEST (First-Seen Destination)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP005",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 55.3,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP005",
+      "model": "qwen3:4b",
+      "verdict": "LIKELY_FALSE_POSITIVE",
+      "confidence": 92.0,
+      "rationale": "Activity verified as legitimate business operation: CI/CD Artifact Repository Automated Pull by DevOps Engineer (Engineering) to JFrog Artifactory Mirror during approved scheduled window Continuous Automation.",
+      "thinking": "Checking contextual telemetry for EMP005...\nUser matches department Engineering with authorized task 'CI/CD Artifact Repository Automated Pull'.\nHigh volume is expected for database replication. Destination JFrog Artifactory Mirror is allowlisted.\nConclusion: High volume is not malicious exfiltration; this is an operational false alarm.",
+      "is_live_call": false
+    },
+    "consensus_status": "FALSE_OPPOSITE_ELIMINATED",
+    "is_false_opposite": true,
+    "false_opposite_type": "False Positive Suppressed",
+    "final_calibrated_risk": 10.2,
+    "final_severity": "LOW",
+    "recommended_action": "CLEAR / ADD TO EXCLUSION LIST",
+    "consensus_explanation": "Base detectors triggered alert (R2_NOVEL_DEST (First-Seen Destination) & ML Score 55.3%), but Ollama Verification confirmed authorized operational task (Activity verified as legitimate business operation: CI/CD Artifact Repository Automated Pull by DevOps Engineer (Engineering) to JFrog Artifactory Mirror during approved scheduled window Continuous Automation.). False opposite successfully eliminated!"
+  },
+  {
+    "entity_id": "EMP008",
+    "rule_layer": {
+      "entity_id": "EMP008",
+      "rule_score": 69.12,
+      "severity": "CRITICAL",
+      "rules_triggered": [
+        "R1_VOLUME_SPIKE (High Byte Egress)",
+        "R2_NOVEL_DEST (First-Seen Destination)",
+        "R3_OFF_HOURS (Night / Non-Working Hours)"
+      ],
+      "rule_count": 3,
+      "sub_volume": 1.0,
+      "sub_novelty": 0.565,
+      "sub_timing": 1.0,
+      "sub_auth": 0.0,
+      "sub_dns": 0.0,
+      "primary_rule_indicator": "R1_VOLUME_SPIKE (High Byte Egress)"
+    },
+    "ml_layer": {
+      "entity_id": "EMP008",
+      "model_type": "IsolationForest (32 Features, RobustScaler)",
+      "ml_score": 56.5,
+      "is_anomaly": true,
+      "decision_status": "OUTLIER",
+      "top_deviations": [
+        {
+          "feature": "bytes_out_per_flow",
+          "z_deviation": 3.82
+        },
+        {
+          "feature": "after_hours_flow_fraction",
+          "z_deviation": 2.94
+        },
+        {
+          "feature": "new_destination_fraction",
+          "z_deviation": 2.45
+        }
+      ],
+      "raw_contamination": 0.02
+    },
+    "ollama_layer": {
+      "entity_id": "EMP008",
+      "model": "qwen3:4b",
+      "verdict": "LIKELY_FALSE_POSITIVE",
+      "confidence": 92.0,
+      "rationale": "Activity verified as legitimate business operation: Nightly Encrypted Database Snapshot Replication by Database Administrator (Infrastructure) to AWS S3 Disaster Recovery Bucket (dst0060) during approved scheduled window 01:00 - 04:00 UTC.",
+      "thinking": "Checking contextual telemetry for EMP008...\nUser matches department Infrastructure with authorized task 'Nightly Encrypted Database Snapshot Replication'.\nHigh volume is expected for database replication. Destination AWS S3 Disaster Recovery Bucket (dst0060) is allowlisted.\nConclusion: High volume is not malicious exfiltration; this is an operational false alarm.",
+      "is_live_call": false
+    },
+    "consensus_status": "FALSE_OPPOSITE_ELIMINATED",
+    "is_false_opposite": true,
+    "false_opposite_type": "False Positive Suppressed",
+    "final_calibrated_risk": 14.1,
+    "final_severity": "LOW",
+    "recommended_action": "CLEAR / ADD TO EXCLUSION LIST",
+    "consensus_explanation": "Base detectors triggered alert (R1_VOLUME_SPIKE (High Byte Egress) & ML Score 56.5%), but Ollama Verification confirmed authorized operational task (Activity verified as legitimate business operation: Nightly Encrypted Database Snapshot Replication by Database Administrator (Infrastructure) to AWS S3 Disaster Recovery Bucket (dst0060) during approved scheduled window 01:00 - 04:00 UTC.). False opposite successfully eliminated!"
+  }
+]
