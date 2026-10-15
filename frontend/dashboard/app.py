@@ -13,7 +13,14 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import sys
 import streamlit as st
+
+# Auto-launch with streamlit runner if invoked directly via bare 'python app.py'
+if not st.runtime.exists():
+    from streamlit.web import cli as stcli
+    sys.argv = ["streamlit", "run", __file__]
+    sys.exit(stcli.main())
 
 # ==========================================
 # PAGE CONFIGURATION & DARK THEME STYLING
@@ -165,19 +172,21 @@ def api_get(endpoint: str, params=None):
 
 def check_api_health():
     try:
-        r = requests.get(f"{API_BASE}/health", timeout=3)
+        r = requests.get(f"{API_BASE}/health", timeout=0.8)
         return r.status_code == 200
     except Exception:
         return False
 
 
-# Auto-login with default admin if no token exists
-if not st.session_state.auth_token:
+api_online = check_api_health()
+
+# Auto-login with default admin if API is online and no token exists
+if api_online and not st.session_state.auth_token:
     try:
         login_res = requests.post(
             f"{API_BASE}/auth/token",
             json={"username": "admin", "password": "admin123"},
-            timeout=4,
+            timeout=1.0,
         )
         if login_res.status_code == 200:
             data = login_res.json()
@@ -195,11 +204,11 @@ with st.sidebar:
     st.caption("Insider Threat Defense Platform v0.1.0")
 
     # API Status Indicator
-    api_online = check_api_health()
     if api_online:
         st.success("🟢 API Connected", icon="✅")
     else:
-        st.error("🔴 API Offline (Check port 8000)", icon="⚠️")
+        st.warning("🟠 API Offline (Showing Demo Data)", icon="⚠️")
+        st.caption("Run `python run.py` to start both API & UI.")
 
     # Auth Section
     with st.expander("🔐 Security Credentials", expanded=not bool(st.session_state.auth_token)):
@@ -293,6 +302,24 @@ if page == "Executive SOC Overview":
 
     scores = scores_res if isinstance(scores_res, list) else []
     cases = cases_res if isinstance(cases_res, list) else []
+
+    # If backend is offline or no scores generated yet, use interactive demo dataset
+    if not scores and not api_online:
+        st.info("💡 **Interactive Preview Mode**: Showing synthesized enterprise insider telemetry. Start backend (`python run.py`) to connect live database.")
+        demo_scores = [
+            {"entity_id": "U102_SecOps", "composite_score": 92.4, "severity": "CRITICAL", "confidence": 0.88, "sub_volume": 0.94, "sub_novelty": 0.85, "sub_auth": 0.60, "sub_dns": 0.78, "sub_timing": 0.82, "mitre_tactics": "T1048.003 - Exfiltration", "primary_indicator": "Massive Outbound Transfer (550MB to unseen IP at 02:30 AM)", "table_sources": "network_flows, auth_logs"},
+            {"entity_id": "U045_Finance", "composite_score": 78.6, "severity": "HIGH", "confidence": 0.82, "sub_volume": 0.42, "sub_novelty": 0.80, "sub_auth": 0.75, "sub_dns": 0.65, "sub_timing": 0.70, "mitre_tactics": "T1078.002 - Initial Access", "primary_indicator": "Brute-Force & Off-Hours Domain Controller Access", "table_sources": "auth_logs"},
+            {"entity_id": "192.168.1.185", "composite_score": 68.2, "severity": "HIGH", "confidence": 0.79, "sub_volume": 0.35, "sub_novelty": 0.60, "sub_auth": 0.20, "sub_dns": 0.92, "sub_timing": 0.50, "mitre_tactics": "T1071.004 - C2", "primary_indicator": "High Entropy DNS Queries (>4.2 entropy, potential tunneling)", "table_sources": "dns_queries"},
+            {"entity_id": "U012_Engineering", "composite_score": 48.0, "severity": "MEDIUM", "confidence": 0.72, "sub_volume": 0.40, "sub_novelty": 0.45, "sub_auth": 0.10, "sub_dns": 0.20, "sub_timing": 0.35, "mitre_tactics": "T1071.001 - Web Protocols", "primary_indicator": "Unusual bulk code sync to external repository", "table_sources": "network_flows"},
+            {"entity_id": "U088_Marketing", "composite_score": 24.5, "severity": "LOW", "confidence": 0.65, "sub_volume": 0.20, "sub_novelty": 0.15, "sub_auth": 0.05, "sub_dns": 0.10, "sub_timing": 0.10, "mitre_tactics": "T1029 - Execution", "primary_indicator": "Standard daytime web browsing", "table_sources": "network_flows"},
+        ]
+        scores = [s for s in demo_scores if s["composite_score"] >= min_score_filter and (severity_filter == "ALL" or s["severity"] == severity_filter)]
+
+    if not cases and not api_online:
+        cases = [
+            {"case_id": "CASE-U102_SecOps-20261015", "entity_id": "U102_SecOps", "case_score": 92.4, "severity": "CRITICAL", "confidence": 0.88, "status": "OPEN", "title": "Suspected Data Exfiltration via Encrypted Tunnel", "description": "Entity transferred 550MB to an unclassified external IP at 2:30 AM on a weekend with Tier-3 asset credentials.", "evidence_summary": "Volume=0.94, Novelty=0.85, Auth=0.60, Timing=0.82"},
+            {"case_id": "CASE-U045_Finance-20261015", "entity_id": "U045_Finance", "case_score": 78.6, "severity": "HIGH", "confidence": 0.82, "status": "INVESTIGATING", "title": "Multiple Failed Authentication Spikes Across Subnets", "description": "14 failed authentication attempts within 3 minutes followed by privileged share access.", "evidence_summary": "Auth=0.75, Novelty=0.80, Timing=0.70"},
+        ]
 
     if entity_search:
         scores = [s for s in scores if entity_search.lower() in str(s.get("entity_id", "")).lower()]
