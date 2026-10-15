@@ -1,0 +1,115 @@
+"""FastAPI router for cross-table threat scoring and investigation cases."""
+from __future__ import annotations
+
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+
+from ...auth.auth import decode_access_token
+from ...storage.storage import DuckDBStorage
+from ...scoring.aggregator import CrossTableScoringEngine
+
+router = APIRouter()
+
+
+class AggregateRequest(BaseModel):
+    table_names: Optional[List[str]] = None
+    weights: Optional[Dict[str, float]] = None
+
+
+class CaseStatusUpdate(BaseModel):
+    status: str  # OPEN, INVESTIGATING, MITIGATED, FALSE_POSITIVE
+
+
+@router.post("/aggregate")
+def aggregate_threat_scores(
+    req: AggregateRequest,
+    token: dict = Depends(decode_access_token),
+):
+    """Aggregate multi-table telemetry, compute composite risk scores, and generate cases."""
+    storage = DuckDBStorage()
+    try:
+        engine = CrossTableScoringEngine(storage=storage)
+        results = engine.aggregate_tables(table_names=req.table_names, weights=req.weights)
+        return results
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Scoring aggregation failed: {str(e)}",
+        )
+    finally:
+        storage.close()
+
+
+@router.get("/scores")
+def get_threat_scores(
+    min_score: float = 0.0,
+    severity: Optional[str] = "ALL",
+    limit: int = 100,
+    token: dict = Depends(decode_access_token),
+):
+    """Retrieve scored entities with optional severity and threshold filtering."""
+    storage = DuckDBStorage()
+    try:
+        engine = CrossTableScoringEngine(storage=storage)
+        scores = engine.get_threat_scores(min_score=min_score, severity=severity, limit=limit)
+        return scores
+    finally:
+        storage.close()
+
+
+@router.get("/cases")
+def get_cases(
+    case_status: Optional[str] = "ALL",
+    limit: int = 50,
+    token: dict = Depends(decode_access_token),
+):
+    """Retrieve prioritized SOC investigation cases."""
+    storage = DuckDBStorage()
+    try:
+        engine = CrossTableScoringEngine(storage=storage)
+        cases = engine.get_cases(status=case_status, limit=limit)
+        return cases
+    finally:
+        storage.close()
+
+
+@router.get("/entity/{entity_id}")
+def get_entity_detail(
+    entity_id: str,
+    token: dict = Depends(decode_access_token),
+):
+    """Retrieve detailed threat score profile and historical cases for a specific entity."""
+    storage = DuckDBStorage()
+    try:
+        engine = CrossTableScoringEngine(storage=storage)
+        detail = engine.get_entity_detail(entity_id)
+        if not detail:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Entity {entity_id} not found")
+        return detail
+    finally:
+        storage.close()
+
+
+@router.post("/case/{case_id}/status")
+def update_case_status(
+    case_id: str,
+    update: CaseStatusUpdate,
+    token: dict = Depends(decode_access_token),
+):
+    """Update case status (e.g. INVESTIGATING, MITIGATED, FALSE_POSITIVE)."""
+    valid_statuses = ["OPEN", "INVESTIGATING", "MITIGATED", "FALSE_POSITIVE"]
+    if update.status.upper() not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status. Choose from: {valid_statuses}",
+        )
+    storage = DuckDBStorage()
+    try:
+        storage.execute(
+            "UPDATE threat_cases SET status = ? WHERE case_id = ?",
+            (update.status.upper(), case_id),
+        )
+        return {"case_id": case_id, "status": update.status.upper(), "message": "Status updated successfully"}
+    finally:
+        storage.close()
