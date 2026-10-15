@@ -1,0 +1,68 @@
+internal_networks: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "192.0.2.0/24"]
+
+# Allowlisted destinations reduce the *priority* of evidence; they never hide it.
+allowlist:
+  destinations: [dst0060, dst0068, dst0069, dst0070]
+  categories: [update]
+
+# Scheduled windows (UTC hours) for known automation (e.g. nightly backup).
+scheduled_windows:
+  - {destinations: [dst0060], hours: [1, 2, 3, 4, 5]}
+  - {destinations: [dst0070], hours: [0, 1, 2, 3, 4, 5, 6]}
+scheduled_min_share: 0.8
+
+category_prior:        # F14: prior risk of a destination category for data egress
+  personal_cloud: 1.0
+  other: 0.7
+  web: 0.5
+  social: 0.4
+  saas: 0.3
+  corporate_cloud: 0.25
+  video: 0.15
+  cdn: 0.10
+  update: 0.05
+  unknown: 0.7
+
+work_hours:            # per peer group [start, end) in UTC hours
+  Engineering: [9, 20]
+  Finance: [8, 18]
+  Sales: [9, 19]
+  Support: [7, 23]
+
+retention:
+  flows_days: 90
+  cases_days: 365
+  audit_days: 730
+
+reason_codes:
+  NEW_DESTINATION: "Destination first seen recently for this user"
+  RARE_AMONG_PEERS: "Few or no peers contact this destination"
+  SELF_BASELINE_DEVIATION: "Upload volume far above the user's own trailing baseline"
+  PEER_BASELINE_DEVIATION: "Upload volume far above the peer-group baseline"
+  UPLOAD_DOMINANT: "Traffic is strongly upload-dominated"
+  OFF_HOURS_TRANSFER: "Transfers concentrated outside the group's working hours"
+  PERIODIC_TRANSFER: "Regular, periodic transfer cadence"
+  CUSUM_ALARM: "Sustained small increases accumulated (CUSUM alarm)"
+  ISOLATION_FOREST_OUTLIER: "Multivariate outlier relative to the training period"
+  DNS_ANOMALY: "High-rate, high-entropy DNS query pattern"
+  DEST_ROTATION: "Many new destinations contacted in one day"
+  CUMULATIVE_ACCUMULATION: "Repeated moderate risk accumulated over several days"
+  TLS_FINGERPRINT_NOVEL: "TLS client fingerprint not previously seen for this user"
+  HIGH_DAILY_RISK: "Single-day risk index reached the case-opening level"
+
+mitre_attack:          # supported exfiltration techniques (tags, not conclusions)
+  NEW_DESTINATION: ["T1567"]
+  UPLOAD_DOMINANT: ["T1567", "T1048"]
+  PERIODIC_TRANSFER: ["T1029"]
+  CUSUM_ALARM: ["T1030"]
+  CUMULATIVE_ACCUMULATION: ["T1030"]
+  DNS_ANOMALY: ["T1071.004", "T1048"]
+  DEST_ROTATION: ["T1567"]
+  OFF_HOURS_TRANSFER: ["T1029"]
+
+mitre_names:
+  T1567: "Exfiltration Over Web Service"
+  T1048: "Exfiltration Over Alternative Protocol"
+  T1029: "Scheduled Transfer"
+  T1030: "Data Transfer Size Limits"
+  T1071.004: "Application Layer Protocol: DNS"

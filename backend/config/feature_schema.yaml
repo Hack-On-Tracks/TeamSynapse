@@ -1,0 +1,42 @@
+version: "1.0.0"
+# Feature catalogue. level: user_day | pair_day. priority: P0 / P1 / ctx (context & data quality).
+# Every feature uses TRAILING history only; missing values are kept as NaN with explicit flags.
+features:
+  - {id: F01, name: out_bytes, level: [user_day, pair_day], priority: P0, desc: "Daily outbound (originator) bytes"}
+  - {id: F02, name: out_in_ratio, level: [user_day, pair_day], priority: P0, desc: "Outbound / inbound byte ratio"}
+  - {id: F03, name: z_self, level: [user_day, pair_day], priority: P0, desc: "Robust z of outbound bytes vs own trailing 14 clean days"}
+  - {id: F04, name: z_peer, level: [user_day, pair_day], priority: P0, desc: "Robust z vs pooled peer-group trailing baseline"}
+  - {id: F05, name: upload_heavy_flows, level: [user_day, pair_day], priority: P0, desc: "Upload-heavy flow count"}
+  - {id: F08, name: cum7_out_bytes, level: [user_day], priority: P0, desc: "7-day cumulative outbound bytes"}
+  - {id: F09, name: is_new, level: [pair_day], priority: P0, desc: "Destination recently first-seen for this user"}
+  - {id: F10, name: dest_age_days, level: [pair_day], priority: P0, desc: "Days since first contact"}
+  - {id: F11, name: bytes_new_dests, level: [user_day], priority: P0, desc: "Outbound bytes to new destinations"}
+  - {id: F12, name: peer_rarity, level: [pair_day], priority: P0, desc: "1 - fraction of peers contacting destination (14d)"}
+  - {id: F14, name: cat_prior, level: [pair_day], priority: P0, desc: "Destination-category prior"}
+  - {id: F15, name: n_new_dests, level: [user_day], priority: P0, desc: "New destinations per day"}
+  - {id: F18, name: bytes_7d, level: [pair_day], priority: P0, desc: "7-day bytes to one destination"}
+  - {id: F19, name: cusum, level: [pair_day], priority: P0, desc: "CUSUM score per user-destination pair"}
+  - {id: F20, name: offhours_share, level: [user_day, pair_day], priority: P0, desc: "Share of outbound bytes outside group work hours"}
+  - {id: F21, name: hourly_divergence, level: [user_day], priority: P0, desc: "Jensen-Shannon divergence vs own hourly profile"}
+  - {id: F23, name: periodicity, level: [pair_day], priority: P0, desc: "FFT periodicity strength on 168h series (>=6 flows)"}
+  - {id: F24, name: iat_cv, level: [user_day, pair_day], priority: P0, desc: "Inter-arrival-time coefficient of variation"}
+  - {id: F25, name: burstiness, level: [user_day, pair_day], priority: P0, desc: "Burstiness (sigma-mu)/(sigma+mu) of inter-arrivals"}
+  - {id: F26, name: n_conn, level: [user_day, pair_day], priority: P0, desc: "Connection count"}
+  - {id: F27, name: mean_out_pkt, level: [user_day, pair_day], priority: P0, desc: "Mean outbound packet size"}
+  - {id: F27b, name: mean_in_pkt, level: [user_day, pair_day], priority: P0, desc: "Mean inbound packet size"}
+  - {id: F28, name: upload_like_starts, level: [user_day, pair_day], priority: P0, desc: "Flows whose shape looks like an upload start"}
+  - {id: F31, name: ja3_novel_share, level: [user_day, pair_day], priority: P0, desc: "Share of flows with TLS fingerprint new to the user"}
+  - {id: F32, name: hidden_sni_share, level: [user_day, pair_day], priority: P0, desc: "Share of flows without visible SNI"}
+  - {id: F34, name: dns_max_hourly_queries, level: [user_day], priority: P0, desc: "Max hourly DNS query count"}
+  - {id: F34b, name: dns_mean_entropy, level: [user_day], priority: P0, desc: "Mean DNS label entropy"}
+  - {id: G1, name: jaccard_peer, level: [user_day], priority: P1, desc: "Jaccard(user dests 14d, peer-common dests)"}
+  - {id: G2, name: dest_drift, level: [user_day], priority: P1, desc: "1 - Jaccard(last 7d dests, previous 14d dests)"}
+  - {id: G3, name: same_edge_48h, level: [pair_day], priority: P1, desc: "Other users creating the same new edge within 48h"}
+  - {id: C1, name: allowlisted, level: [pair_day], priority: ctx, desc: "Destination allowlisted by policy"}
+  - {id: C2, name: scheduled, level: [pair_day], priority: ctx, desc: "Transfers inside a registered scheduled window"}
+  - {id: C3, name: asset_tier, level: [user_day], priority: ctx, desc: "Asset tier (1-3)"}
+  - {id: C4, name: n_clean_days, level: [user_day], priority: ctx, desc: "Clean baseline days available"}
+  - {id: C5, name: identity_confidence, level: [user_day], priority: ctx, desc: "Mean identity confidence"}
+  - {id: C6, name: capture_quality, level: [user_day], priority: ctx, desc: "Mean capture quality"}
+missingness_flags: [m_sni, m_ja3, m_dns, m_baseline]
+forbidden_in_features: [label, scenario, scenario_id, scenario_type, is_malicious, ground_truth, attack]

@@ -1,0 +1,82 @@
+app:
+  name: CipherSentinel
+  version: 0.1.0
+  schema_version: "1.0.0"
+  feature_schema_version: "1.0.0"
+  model_version: "ciphersentinel-0.1.0"
+
+simulation:
+  seed: 42
+  eval_seeds: [101, 102, 103, 104, 105]
+  n_days: 60
+  start_date: "2024-01-01"          # a Monday
+  group_sizes: {Engineering: 28, Finance: 14, Sales: 24, Support: 14}
+  n_destinations: 300
+  flows_per_user_day: 34
+  quic_share: 0.25
+  sni_visible_share: 0.85           # overall target; QUIC flows are less visible
+  capture_loss: 0.01                # fraction of flow records dropped
+  identity_uncertainty: 0.02        # fraction of flows with ambiguous attribution
+  shared_pool_share: 0.60           # fraction of flows to group-shared destinations
+  scenarios:                        # number of injected malicious cases per scenario
+    S1: 2
+    S2: 4
+    S3: 2
+    S4: 2
+    S5: 2
+    S6: 1
+    S7: 1
+  s5_rotation_days: 5
+  s6_start_day: 28
+  test_window_start: 36             # injected incidents start inside the tuning/test windows
+
+split:
+  warmup: [0, 13]
+  fit: [14, 29]
+  tune: [30, 35]
+  test: [36, 59]
+
+baseline:
+  window_days: 14
+  min_days: 7
+  epsilon: 1.0e-6
+  z_clip: 10
+  cold_start_note: "With <7 clean days, only the peer baseline is used and confidence is reduced."
+
+features:
+  new_destination_window_days: 21     # destination is 'new' if first seen <=21 days ago ...
+  established_before_day: 14          # ... and first seen on/after this day (cold-start censoring)
+  peer_window_days: 14
+  upload_heavy_min_bytes: 1000000
+  upload_heavy_ratio: 2.0
+  rotation_min_new_dests: 8
+  rotation_min_bytes: 20000000
+  volume_gate_low_bytes: 1000000      # novelty/timing/direction gated: 0 at 1 MB ... 1 at 100 MB
+  volume_gate_high_bytes: 100000000
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  features: data/features
+  cases: data/cases
+  demo: data/demo
+  models: models
+  reports: reports
+
+genai:
+  ollama_url: "http://127.0.0.1:11434"
+  model: "qwen3:4b"
+  alt_models: ["qwen3:8b", "phi4-mini"]
+  timeout_s: 60
+  max_tokens: 450
+  temperature: 0.2
+  local_only: true
+
+privacy:
+  retention_days: 90
+  pseudonym_prefix_user: "u_"
+  pseudonym_prefix_device: "d_"
+  pseudonym_hex_len: 12
+
+queue:
+  max_priority_cases_per_day: 5
