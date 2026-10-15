@@ -7,38 +7,78 @@ interface CytoscapeGraphProps {
     nodes: any[];
     edges: any[];
   };
-  onSelectNode: (nodeData: any) => void;
-  onSelectEdge: (edgeData: any) => void;
-  onClearSelection: () => void;
+  onSelectNode?: (nodeData: any) => void;
+  onSelectEdge?: (edgeData: any) => void;
+  onNodeSelect?: (nodeData: any) => void;
+  onEdgeSelect?: (edgeData: any) => void;
+  onClearSelection?: () => void;
   isLoading?: boolean;
+  filterRiskThreshold?: number;
+  selectedNodeType?: string;
 }
 
 export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
   elements,
   onSelectNode,
   onSelectEdge,
+  onNodeSelect,
+  onEdgeSelect,
   onClearSelection,
   isLoading = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [layoutName, setLayoutName] = useState<'concentric' | 'circle' | 'grid' | 'cose'>('concentric');
+  const [layoutName, setLayoutName] = useState<'cose' | 'concentric' | 'circle' | 'grid'>('cose');
+
+  const handleNodeSelect = onSelectNode || onNodeSelect || (() => {});
+  const handleEdgeSelect = onSelectEdge || onEdgeSelect || (() => {});
+  const handleClearSelection = onClearSelection || (() => {});
 
   // Initialize and update Cytoscape
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Build elements payload
+    // Build elements payload with guaranteed fallback sizes and colors
     const cyElements = [
-      ...elements.nodes.map((n) => ({
-        group: 'nodes' as const,
-        data: n.data,
-      })),
-      ...elements.edges.map((e) => ({
-        group: 'edges' as const,
-        data: e.data,
-      })),
+      ...(elements.nodes || []).map((n) => {
+        const d = n.data || n;
+        const risk = Number(d.riskScore ?? d.risk_score ?? 15);
+        const nodeSize = d.size || Math.max(34, Math.min(62, 30 + (risk / 100) * 30));
+        const severity = d.severity || (risk >= 80 ? 'CRITICAL' : risk >= 60 ? 'HIGH' : risk >= 35 ? 'MEDIUM' : 'LOW');
+        
+        return {
+          group: 'nodes' as const,
+          data: {
+            ...d,
+            id: String(d.id),
+            label: d.label || d.id,
+            size: nodeSize,
+            severity,
+            risk_score: risk,
+            riskScore: risk,
+          },
+        };
+      }),
+      ...(elements.edges || []).map((e) => {
+        const d = e.data || e;
+        const risk = Number(d.riskScore ?? d.risk_score ?? 10);
+        const edgeWidth = d.width || Math.max(2.5, Math.min(8, 2 + (risk / 100) * 5));
+        
+        return {
+          group: 'edges' as const,
+          data: {
+            ...d,
+            id: String(d.id || `${d.source}-${d.target}`),
+            source: String(d.source),
+            target: String(d.target),
+            width: edgeWidth,
+            risk_score: risk,
+            riskScore: risk,
+            label: d.label || (d.protocol ? `${d.protocol}` : ''),
+          },
+        };
+      }),
     ];
 
     if (cyRef.current) {
@@ -48,22 +88,32 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
     const cy = cytoscape({
       container: containerRef.current,
       elements: cyElements,
+      boxSelectionEnabled: false,
+      autounselectify: false,
       style: [
         {
           selector: 'node',
           style: {
             'label': 'data(label)',
-            'color': '#cbd5e1',
-            'font-size': '10px',
+            'color': '#f8fafc',
+            'font-size': '11px',
+            'font-weight': 600,
             'font-family': 'Plus Jakarta Sans, sans-serif',
             'text-valign': 'bottom',
-            'text-margin-y': 5,
+            'text-margin-y': 7,
             'background-color': '#0ea5e9',
-            'border-width': 2,
+            'border-width': 2.5,
             'border-color': '#38bdf8',
             'width': 'data(size)',
             'height': 'data(size)',
-            'transition-property': 'background-color, line-color, target-arrow-color, opacity, border-color',
+            'text-background-opacity': 0.85,
+            'text-background-color': '#060b17',
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle',
+            'text-border-opacity': 0.5,
+            'text-border-width': 1,
+            'text-border-color': '#1e293b',
+            'transition-property': 'background-color, line-color, target-arrow-color, opacity, border-color, border-width',
             'transition-duration': 200,
           },
         },
@@ -73,9 +123,9 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           style: {
             'background-color': '#ef4444',
             'border-color': '#f87171',
-            'shadow-blur': 12,
+            'shadow-blur': 16,
             'shadow-color': '#ef4444',
-            'shadow-opacity': 0.8,
+            'shadow-opacity': 0.9,
           },
         },
         {
@@ -83,6 +133,9 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           style: {
             'background-color': '#f59e0b',
             'border-color': '#fbbf24',
+            'shadow-blur': 10,
+            'shadow-color': '#f59e0b',
+            'shadow-opacity': 0.6,
           },
         },
         {
@@ -101,15 +154,23 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         },
         // Node Type Shapes
         {
-          selector: 'node[type = "internal_service"]',
+          selector: 'node[type = "internal_server"], node[type = "internal_service"]',
           style: {
             'shape': 'round-rectangle',
           },
         },
         {
-          selector: 'node[type ^= "external"]',
+          selector: 'node[type = "dns_resolver"]',
+          style: {
+            'shape': 'hexagon',
+          },
+        },
+        {
+          selector: 'node[type ^= "cloud"], node[type ^= "external"]',
           style: {
             'shape': 'diamond',
+            'background-color': '#ec4899',
+            'border-color': '#f472b6',
           },
         },
         // Edge Styling
@@ -117,27 +178,34 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           selector: 'edge',
           style: {
             'width': 'data(width)',
-            'line-color': '#334155',
-            'target-arrow-color': '#334155',
+            'line-color': '#475569',
+            'target-arrow-color': '#475569',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            'arrow-scale': 1.1,
-            'opacity': 0.75,
+            'arrow-scale': 1.25,
+            'opacity': 0.8,
+            'line-cap': 'round',
           },
         },
         {
-          selector: 'edge[risk_score >= 80]',
+          selector: 'edge[risk_score >= 80], edge[riskScore >= 80]',
           style: {
             'line-color': '#ef4444',
             'target-arrow-color': '#ef4444',
-            'opacity': 0.95,
+            'width': 5,
+            'opacity': 1.0,
+            'shadow-blur': 8,
+            'shadow-color': '#ef4444',
+            'shadow-opacity': 0.8,
           },
         },
         {
-          selector: 'edge[risk_score >= 50][risk_score < 80]',
+          selector: 'edge[risk_score >= 50][risk_score < 80], edge[riskScore >= 50][riskScore < 80]',
           style: {
             'line-color': '#f59e0b',
             'target-arrow-color': '#f59e0b',
+            'width': 3.5,
+            'opacity': 0.95,
           },
         },
         {
@@ -153,7 +221,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           selector: '.highlighted',
           style: {
             'opacity': 1.0,
-            'border-width': 4,
+            'border-width': 4.5,
             'border-color': '#38bdf8',
             'z-index': 999,
           },
@@ -161,16 +229,56 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         {
           selector: '.dimmed',
           style: {
-            'opacity': 0.15,
+            'opacity': 0.18,
           },
         },
       ],
       layout: {
         name: layoutName,
         animate: true,
-        animationDuration: 400,
+        animationDuration: 350,
+        padding: 60,
+        ...(layoutName === 'cose'
+          ? {
+              idealEdgeLength: 140,
+              nodeOverlap: 30,
+              nodeRepulsion: 600000,
+              gravity: 60,
+              numIter: 1000,
+            }
+          : {}),
       },
     });
+
+    // Ensure layout fit and resize run cleanly
+    cy.on('layoutstop', () => {
+      cy.resize();
+      cy.fit(undefined, 60);
+      cy.center();
+    });
+
+    cy.ready(() => {
+      cy.resize();
+      cy.fit(undefined, 60);
+      cy.center();
+    });
+
+    const timer = setTimeout(() => {
+      if (!cy.isDestroyed()) {
+        cy.resize();
+        cy.fit(undefined, 60);
+        cy.center();
+      }
+    }, 250);
+
+    const handleWindowResize = () => {
+      if (cyRef.current && !cyRef.current.isDestroyed()) {
+        cyRef.current.resize();
+        cyRef.current.fit(undefined, 60);
+        cyRef.current.center();
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
 
     // Tap on node
     cy.on('tap', 'node', (evt: EventObject) => {
@@ -179,7 +287,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
       const neighborhood = node.neighborhood().add(node);
       cy.elements().difference(neighborhood).addClass('dimmed');
       neighborhood.addClass('highlighted');
-      onSelectNode(node.data());
+      handleNodeSelect(node.data());
     });
 
     // Tap on edge
@@ -188,20 +296,22 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
       cy.elements().removeClass('highlighted dimmed');
       edge.addClass('highlighted');
       edge.connectedNodes().addClass('highlighted');
-      onSelectEdge(edge.data());
+      handleEdgeSelect(edge.data());
     });
 
     // Tap background
     cy.on('tap', (evt: EventObject) => {
       if (evt.target === cy) {
         cy.elements().removeClass('highlighted dimmed');
-        onClearSelection();
+        handleClearSelection();
       }
     });
 
     cyRef.current = cy;
 
     return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleWindowResize);
       cy.destroy();
       cyRef.current = null;
     };
@@ -229,16 +339,19 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         zoom: 1.8,
         duration: 500,
       });
-      onSelectNode(matched.first().data());
+      handleNodeSelect(matched.first().data());
     }
   };
 
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.25);
   const handleZoomOut = () => cyRef.current?.zoom(cyRef.current.zoom() * 0.8);
-  const handleFit = () => cyRef.current?.fit(undefined, 30);
+  const handleFit = () => {
+    cyRef.current?.resize();
+    cyRef.current?.fit(undefined, 45);
+  };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '580px', overflow: 'hidden', background: '#060b17' }}>
       {/* Top Floating Toolbar */}
       <div
         style={{
@@ -259,7 +372,16 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
               placeholder="Search Entity / IP..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: 30, width: 220, height: 34 }}
+              style={{
+                paddingLeft: 30,
+                width: 220,
+                height: 34,
+                background: 'rgba(11, 21, 43, 0.9)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 6,
+                fontSize: '0.8rem',
+              }}
             />
           </div>
           <button
@@ -273,6 +395,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
               height: 34,
               fontSize: '0.8rem',
               fontWeight: 600,
+              cursor: 'pointer',
             }}
           >
             Find
@@ -282,7 +405,16 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         <select
           value={layoutName}
           onChange={(e) => setLayoutName(e.target.value as any)}
-          style={{ height: 34 }}
+          style={{
+            height: 34,
+            background: 'rgba(11, 21, 43, 0.9)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 6,
+            padding: '0 10px',
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+          }}
         >
           <option value="concentric">Concentric Layout</option>
           <option value="cose">Force-Directed (COSE)</option>
@@ -301,7 +433,8 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
-          background: 'var(--bg-surface)',
+          background: 'rgba(11, 21, 43, 0.9)',
+          backdropFilter: 'blur(8px)',
           padding: 6,
           borderRadius: 8,
           border: '1px solid var(--border-color)',
@@ -310,21 +443,21 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         <button
           onClick={handleZoomIn}
           title="Zoom In"
-          style={{ background: 'transparent', color: 'var(--text-primary)', padding: 6, borderRadius: 4 }}
+          style={{ background: 'transparent', color: 'var(--text-primary)', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}
         >
           <ZoomIn size={18} />
         </button>
         <button
           onClick={handleZoomOut}
           title="Zoom Out"
-          style={{ background: 'transparent', color: 'var(--text-primary)', padding: 6, borderRadius: 4 }}
+          style={{ background: 'transparent', color: 'var(--text-primary)', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}
         >
           <ZoomOut size={18} />
         </button>
         <button
           onClick={handleFit}
           title="Reset View"
-          style={{ background: 'transparent', color: 'var(--accent-cyan)', padding: 6, borderRadius: 4 }}
+          style={{ background: 'transparent', color: 'var(--accent-cyan)', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}
         >
           <Maximize2 size={18} />
         </button>
@@ -337,7 +470,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           bottom: 24,
           left: 24,
           zIndex: 10,
-          background: 'rgba(11, 19, 43, 0.88)',
+          background: 'rgba(11, 21, 43, 0.9)',
           backdropFilter: 'blur(8px)',
           padding: '10px 14px',
           borderRadius: 8,
@@ -348,7 +481,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           gap: 6,
         }}
       >
-        <div style={{ fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Topology Legend
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -367,13 +500,13 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', color: 'var(--text-muted)' }}>
           <span>● Circle: Endpoint</span>
-          <span>■ Box: Internal</span>
-          <span>◆ Diamond: External Cloud</span>
+          <span>■ Box: Server</span>
+          <span>◆ Diamond: Cloud SaaS</span>
         </div>
       </div>
 
       {/* Main Cytoscape Canvas */}
-      <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#070d1e' }} />
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#060b17' }} />
 
       {/* Loading Overlay */}
       {isLoading && (
@@ -381,7 +514,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(7, 13, 30, 0.75)',
+            background: 'rgba(6, 11, 23, 0.85)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -390,7 +523,7 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           }}
         >
           <RefreshCw className="animate-spin" size={24} style={{ color: 'var(--accent-cyan)' }} />
-          <span style={{ fontWeight: 600 }}>Aggregating Network Topology...</span>
+          <span style={{ fontWeight: 600, color: '#f8fafc' }}>Aggregating Network Topology...</span>
         </div>
       )}
     </div>

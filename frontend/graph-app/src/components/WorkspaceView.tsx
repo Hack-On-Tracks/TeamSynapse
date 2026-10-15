@@ -593,24 +593,55 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
 
           {/* VIEW: NETWORK GRAPH */}
           {view === 'Network Graph' && (
-            <div className="space-y-4">
-              <div className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold">Temporal Topology Graph</span>
-                  <span className="text-xs text-muted-foreground">
-                    {graphElements.nodes.length} nodes · {graphElements.edges.length} flow edges
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+              <div
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Temporal Topology Graph
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)' }}>
+                    {graphElements.nodes.length} nodes &bull; {graphElements.edges.length} flow edges
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={onRefreshGraph}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Button variant="outline" size="sm" onClick={onRefreshGraph} style={{ cursor: 'pointer', display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <RefreshCw size={12} />
                     Reset Graph
                   </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                <div className="lg:col-span-3 h-[600px] border border-border rounded-lg overflow-hidden bg-card relative">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) 380px',
+                  gap: '16px',
+                  height: '560px',
+                  minHeight: '560px',
+                  width: '100%',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    minHeight: '560px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    background: '#060b17',
+                    position: 'relative',
+                  }}
+                >
                   <CytoscapeGraph
                     elements={graphElements}
                     onNodeSelect={setSelectedNode}
@@ -620,10 +651,19 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                   />
                 </div>
 
-                <div className="h-[600px] border border-border rounded-lg overflow-y-auto bg-card p-4">
+                <div
+                  style={{
+                    height: '100%',
+                    minHeight: '560px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    overflowY: 'auto',
+                    background: 'var(--bg-card)',
+                  }}
+                >
                   <InvestigationDrawer
-                    node={selectedNode}
-                    edge={selectedEdge}
+                    selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
                     onClose={() => {
                       setSelectedNode(null);
                       setSelectedEdge(null);
@@ -644,7 +684,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
 
           {/* VIEW: TEMPORAL REPLAY */}
           {view === 'Temporal Replay' && (
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
               <ReplayController
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
@@ -666,7 +706,17 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                 onScenarioChange={setSelectedScenario}
               />
 
-              <div className="h-[520px] border border-border rounded-lg overflow-hidden bg-card">
+              <div
+                style={{
+                  height: '560px',
+                  minHeight: '560px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: '#060b17',
+                  position: 'relative',
+                }}
+              >
                 <CytoscapeGraph
                   elements={graphElements}
                   onNodeSelect={setSelectedNode}

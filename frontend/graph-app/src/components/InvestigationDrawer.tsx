@@ -2,19 +2,57 @@ import React, { useState } from 'react';
 import { X, ShieldAlert, ArrowUpRight, ArrowDownLeft, Clock, Activity, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface InvestigationDrawerProps {
-  selectedNode: any | null;
-  selectedEdge: any | null;
+  selectedNode?: any | null;
+  selectedEdge?: any | null;
+  node?: any | null;
+  edge?: any | null;
   onClose: () => void;
   onUpdateCaseStatus?: (caseId: string, status: string) => void;
+  onTriggerInvestigation?: (entityId: string) => void;
 }
 
 export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
   selectedNode,
   selectedEdge,
+  node,
+  edge,
   onClose,
   onUpdateCaseStatus,
+  onTriggerInvestigation,
 }) => {
-  if (!selectedNode && !selectedEdge) return null;
+  const activeNode = selectedNode || node;
+  const activeEdge = selectedEdge || edge;
+
+  if (!activeNode && !activeEdge) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '400px',
+          background: 'var(--bg-surface)',
+          borderRadius: 8,
+          border: '1px solid var(--border-color)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          gap: 12,
+        }}
+      >
+        <ShieldAlert size={36} style={{ color: 'var(--accent-cyan)', opacity: 0.8 }} />
+        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+          Interactive Entity Inspector
+        </div>
+        <p style={{ fontSize: '0.8rem', lineHeight: 1.5, maxWidth: 280 }}>
+          Click on any node or flow edge on the topological graph to inspect pseudonymous entity attributes, peer deviations, and threat evidence.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -43,7 +81,7 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShieldAlert size={18} style={{ color: 'var(--accent-cyan)' }} />
           <span style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.02em' }}>
-            {selectedNode ? 'Entity Investigation Dossier' : 'Aggregated Edge Evidence'}
+            {activeNode ? 'Entity Investigation Dossier' : 'Aggregated Edge Evidence'}
           </span>
         </div>
         <button
@@ -56,7 +94,7 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
 
       {/* Body Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {selectedNode && (
+        {activeNode && (
           <>
             {/* Entity Overview Card */}
             <div style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 8, border: '1px solid var(--border-color)' }}>
@@ -64,30 +102,30 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pseudonymous Entity ID</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: 2 }}>
-                    {selectedNode.entity_id || selectedNode.id}
+                    {activeNode.entity_id || activeNode.id || activeNode.label}
                   </div>
                 </div>
-                <span className={`badge badge-${(selectedNode.severity || 'low').toLowerCase()}`}>
-                  {selectedNode.severity || 'LOW'} ({selectedNode.risk_score || 10})
+                <span className={`badge badge-${(activeNode.severity || 'low').toLowerCase()}`}>
+                  {activeNode.severity || 'LOW'} ({activeNode.risk_score || activeNode.riskScore || 10})
                 </span>
               </div>
 
               <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.8rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Node Type:</span>
-                  <div style={{ fontWeight: 600 }}>{selectedNode.type}</div>
+                  <div style={{ fontWeight: 600 }}>{activeNode.type}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>IP Address:</span>
-                  <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{selectedNode.ip || selectedNode.id}</div>
+                  <span style={{ color: 'var(--text-muted)' }}>IP / Label:</span>
+                  <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{activeNode.label || activeNode.ip || activeNode.id}</div>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Asset Criticality:</span>
-                  <div style={{ fontWeight: 600 }}>Tier {selectedNode.asset_tier || (selectedNode.id.startsWith('10.') ? 2 : 1)}</div>
+                  <div style={{ fontWeight: 600 }}>Tier {activeNode.asset_tier || activeNode.assetTier || 2}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Graph Degree:</span>
-                  <div style={{ fontWeight: 600 }}>{selectedNode.degree || 1} connections</div>
+                  <span style={{ color: 'var(--text-muted)' }}>Observed Period:</span>
+                  <div style={{ fontWeight: 600 }}>{activeNode.lastSeen || '14 Days'}</div>
                 </div>
               </div>
             </div>
@@ -98,8 +136,8 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
                 <Activity size={14} /> Behavioral Baseline Comparison
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.4 }}>
-                {selectedNode.risk_score >= 60
-                  ? `Outbound volume is ${(selectedNode.risk_score / 15).toFixed(1)}x higher than peer group median (Finance/Engineering). Temporal deviation flagged during off-hours.`
+                {(activeNode.risk_score || activeNode.riskScore || 0) >= 60
+                  ? `Outbound volume is ${(((activeNode.risk_score || activeNode.riskScore) / 15)).toFixed(1)}x higher than peer group median (Finance/Engineering). Temporal deviation flagged during off-hours.`
                   : 'Behavior aligns with historical 14-day rolling peer-group baseline. Normal protocol and port distribution.'}
               </p>
             </div>
@@ -111,7 +149,7 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
                   <ArrowUpRight size={14} style={{ color: 'var(--accent-rose)' }} /> Total Outbound
                 </div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 4 }}>
-                  {((selectedNode.total_volume || 0) / 1_000_000).toFixed(2)} MB
+                  {(((activeNode.total_volume || activeNode.totalBytes || 0)) / 1_000_000).toFixed(2)} MB
                 </div>
               </div>
               <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-color)' }}>
@@ -124,7 +162,7 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
           </>
         )}
 
-        {selectedEdge && (
+        {activeEdge && (
           <>
             {/* Aggregated Edge Overview */}
             <div style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 8, border: '1px solid var(--border-color)' }}>
@@ -134,32 +172,32 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
                     Aggregated Flow Edge (Virtual Aggregate)
                   </div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--accent-cyan)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-                    {selectedEdge.source} ➔ {selectedEdge.target}
+                    {activeEdge.source} ➔ {activeEdge.target}
                   </div>
                 </div>
-                <span className={`badge ${selectedEdge.risk_score >= 60 ? 'badge-critical' : 'badge-low'}`}>
-                  Risk {selectedEdge.risk_score}
+                <span className={`badge ${(activeEdge.risk_score || activeEdge.riskScore || 0) >= 60 ? 'badge-critical' : 'badge-low'}`}>
+                  Risk {activeEdge.risk_score || activeEdge.riskScore || 10}
                 </span>
               </div>
 
               <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: '0.8rem' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Flows Represented:</span>
-                  <div style={{ fontWeight: 700 }}>{selectedEdge.flow_count} flows</div>
+                  <span style={{ color: 'var(--text-muted)' }}>Flows Count:</span>
+                  <div style={{ fontWeight: 700 }}>{activeEdge.flow_count || activeEdge.flowsCount || 1} flows</div>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Protocol / App:</span>
-                  <div style={{ fontWeight: 700 }}>{selectedEdge.protocol || 'TCP'} / HTTPS</div>
+                  <div style={{ fontWeight: 700 }}>{activeEdge.protocol || 'TCP'} / {activeEdge.app || 'TLS'}</div>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Outbound Bytes:</span>
-                  <div style={{ fontWeight: 700, color: selectedEdge.bytes_sent > 10_000_000 ? 'var(--accent-rose)' : 'inherit' }}>
-                    {((selectedEdge.bytes_sent || 0) / 1_000_000).toFixed(2)} MB
+                  <div style={{ fontWeight: 700, color: (activeEdge.bytes_sent || activeEdge.totalBytes || 0) > 10_000_000 ? 'var(--accent-rose)' : 'inherit' }}>
+                    {(((activeEdge.bytes_sent || activeEdge.totalBytes || 0)) / 1_000_000).toFixed(2)} MB
                   </div>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Category:</span>
-                  <div style={{ fontWeight: 700 }}>{selectedEdge.category || 'general'}</div>
+                  <div style={{ fontWeight: 700 }}>{activeEdge.category || activeEdge.app || 'general'}</div>
                 </div>
               </div>
             </div>
@@ -170,9 +208,9 @@ export const InvestigationDrawer: React.FC<InvestigationDrawerProps> = ({
                 <FileText size={14} /> Supporting Evidence & Rationale
               </div>
               <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <li>Aggregated volume: {((selectedEdge.bytes_sent || 0) / 1_000_000).toFixed(1)} MB transmitted</li>
-                <li>Destination type: {selectedEdge.category} (RFC 5737 simulated cloud)</li>
-                <li>Allowlist status: {selectedEdge.allowlisted ? 'Allowlisted policy match' : 'Non-allowlisted transfer'}</li>
+                <li>Aggregated volume: {(((activeEdge.bytes_sent || activeEdge.totalBytes || 0)) / 1_000_000).toFixed(1)} MB transmitted</li>
+                <li>Destination type: {activeEdge.category || activeEdge.app || 'External Cloud'}</li>
+                <li>Allowlist status: {activeEdge.allowlisted ? 'Allowlisted policy match' : 'Non-allowlisted transfer'}</li>
                 <li>MITRE ATT&CK: T1048.003 (Exfiltration Over Protocol)</li>
               </ul>
             </div>

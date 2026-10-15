@@ -63,12 +63,17 @@ class CrossTableScoringEngine:
                 sub_auth DOUBLE,
                 sub_dns DOUBLE,
                 sub_timing DOUBLE,
+                sub_ml_isolation_forest DOUBLE,
                 mitre_tactics VARCHAR,
                 primary_indicator VARCHAR,
                 table_sources VARCHAR,
                 updated_at TIMESTAMP
             );
         """)
+        try:
+            self.storage.execute("ALTER TABLE threat_scores ADD COLUMN IF NOT EXISTS sub_ml_isolation_forest DOUBLE")
+        except Exception:
+            pass
         self.storage.execute("""
             CREATE TABLE IF NOT EXISTS threat_cases (
                 case_id VARCHAR PRIMARY KEY,
@@ -120,6 +125,16 @@ class CrossTableScoringEngine:
 
         entity_signals: Dict[str, Dict[str, Any]] = {}
 
+        # Load trained Isolation Forest service if available
+        ml_service = None
+        try:
+            from ..detectors.trained_model_service import TrainedIsolationForestService
+            svc = TrainedIsolationForestService.get_instance()
+            if svc.is_loaded:
+                ml_service = svc
+        except Exception:
+            pass
+
         for tbl in table_names:
             try:
                 df = self.storage.query(f"SELECT * FROM {tbl}")
@@ -133,6 +148,16 @@ class CrossTableScoringEngine:
             if not ent_col:
                 # If no explicit entity column, skip table
                 continue
+
+            # Run pre-trained Isolation Forest on table if available
+            if ml_service is not None and not df.empty:
+                try:
+                    ml_pred = ml_service.predict(df)
+                    df = df.copy()
+                    df["_ml_if_flag"] = ml_pred["anomaly_flags"]
+                    df["_ml_if_score"] = ml_pred["anomaly_scores"]
+                except Exception:
+                    pass
 
             # Process each row into entity signal bins
             cols = df.columns.tolist()
@@ -149,6 +174,7 @@ class CrossTableScoringEngine:
                         "event_count": 0,
                         "anomaly_flags": 0,
                         "anomaly_scores": [],
+                        "ml_scores": [],
                         "is_new_dest": False,
                         "auth_failures": 0,
                         "dns_queries": 0,
@@ -161,6 +187,16 @@ class CrossTableScoringEngine:
                 rec = entity_signals[entity_id]
                 rec["tables"].add(tbl)
                 rec["event_count"] += 1
+
+                # ML Isolation Forest flags
+                if "_ml_if_flag" in cols and pd.notna(row["_ml_if_flag"]):
+                    if int(row["_ml_if_flag"]) == 1:
+                        rec["anomaly_flags"] += 1
+                if "_ml_if_score" in cols and pd.notna(row["_ml_if_score"]):
+                    try:
+                        rec["ml_scores"].append(float(row["_ml_if_score"]))
+                    except Exception:
+                        pass
 
                 # 1. Volume indicators
                 for bcol in ["bytes", "out_bytes", "bytes_sent", "flow_size", "transfer_bytes"]:
@@ -230,10 +266,15 @@ class CrossTableScoringEngine:
             v_bytes = sig["volume_bytes"]
             sub_vol = min(1.0, 1.0 / (1.0 + math.exp(-0.000002 * (v_bytes - 1_000_000)))) if v_bytes > 0 else 0.0
 
-            # Novelty subscore
+            # ML Isolation Forest subscore (0.0 to 1.0)
+            sub_ml_if = float(np.mean(sig["ml_scores"])) / 100.0 if sig.get("ml_scores") else 0.0
+
+            # Novelty subscore (destinations & multivariate outlier signals)
             sub_nov = 0.8 if sig["is_new_dest"] else 0.1
             if sig["anomaly_flags"] > 0:
                 sub_nov = min(1.0, sub_nov + 0.15 * min(sig["anomaly_flags"], 3))
+            if sub_ml_if > 0.0:
+                sub_nov = min(1.0, max(sub_nov, sub_ml_if))
 
             # Auth subscore
             sub_auth = min(1.0, sig["auth_failures"] * 0.25)
@@ -300,6 +341,7 @@ class CrossTableScoringEngine:
                 "sub_auth": round(sub_auth, 3),
                 "sub_dns": round(sub_dns, 3),
                 "sub_timing": round(sub_timing, 3),
+                "sub_ml_isolation_forest": round(sub_ml_if, 3),
                 "mitre_tactics": f"{mitre_info['technique']} - {mitre_info['tactic']}",
                 "primary_indicator": f"{primary_key.capitalize()} anomaly ({mitre_info['name']})",
                 "table_sources": tables_str,
@@ -330,7 +372,7 @@ class CrossTableScoringEngine:
                         "status": "OPEN",
                         "title": f"Suspicious Activity Detected for {item['entity_id']}",
                         "description": f"Entity scored {item['composite_score']}/100 based on {item['primary_indicator']}. Sources: {item['table_sources']}.",
-                        "evidence_summary": f"Volume={item['sub_volume']}, Novelty={item['sub_novelty']}, Auth={item['sub_auth']}, DNS={item['sub_dns']}",
+                        "evidence_summary": f"Volume={item['sub_volume']}, Novelty={item['sub_novelty']}, Auth={item['sub_auth']}, DNS={item['sub_dns']}, ML_Outlier={item['sub_ml_isolation_forest']}",
                         "created_at": now,
                     })
 

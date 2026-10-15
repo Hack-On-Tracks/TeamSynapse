@@ -125,3 +125,38 @@ export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {
   }
   return [];
 }
+
+export interface ModelInfo {
+  loaded: boolean;
+  model_type?: string;
+  scaler_type?: string;
+  n_features?: number;
+  features?: string[];
+  n_estimators?: number;
+  contamination?: number;
+  offset?: number;
+}
+
+export async function fetchModelInfo(): Promise<ModelInfo | null> {
+  try {
+    const res = await fetch(`${API_BASE}/detect/model/info`);
+    if (res.ok) return await res.json();
+  } catch {
+    // Fallback
+  }
+  return null;
+}
+
+export async function runModelPredict(records?: any[], tableName?: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/detect/model/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records, table_name: tableName }),
+    });
+    if (res.ok) return await res.json();
+  } catch {
+    // Fallback
+  }
+  return null;
+}
