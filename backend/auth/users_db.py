@@ -69,7 +69,7 @@ class UsersDatabase:
                 ip_address VARCHAR
             );
         """)
-        # Seed default admin user if users table is empty
+        # Seed default admin and analyst users if users table is empty or missing them
         res = self._storage.query("SELECT COUNT(*) as count FROM users")
         if res["count"][0] == 0:
             self.create_user(
@@ -78,7 +78,13 @@ class UsersDatabase:
                 full_name="System Administrator",
                 role="admin",
             )
-            self.log_audit_event("SYSTEM_INIT", "system", "SUCCESS", "Seeded default admin user")
+            self.create_user(
+                username="analyst",
+                password=os.getenv("ANALYST_PASSWORD", "analyst123"),
+                full_name="Janhvi S.",
+                role="analyst",
+            )
+            self.log_audit_event("SYSTEM_INIT", "system", "SUCCESS", "Seeded default admin and analyst users")
 
     def create_user(
         self, username: str, password: str, full_name: str = "", role: str = "analyst"

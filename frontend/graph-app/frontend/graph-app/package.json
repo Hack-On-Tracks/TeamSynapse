@@ -1,0 +1,28 @@
+{
+  "name": "ciphersentinel-graph-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx -y vite@5.4.2 --port 5173",
+    "build": "npx -y vite@5.4.2 build",
+    "preview": "npx -y vite@5.4.2 preview --port 5173"
+  },
+  "dependencies": {
+    "cytoscape": "^3.30.2",
+    "lucide-react": "^0.441.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/cytoscape": "^3.19.16",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.21.2"
+  }
+}

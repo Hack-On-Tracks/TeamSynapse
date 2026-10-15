@@ -18,7 +18,8 @@ class AggregateRequest(BaseModel):
 
 
 class CaseStatusUpdate(BaseModel):
-    status: str  # OPEN, INVESTIGATING, MITIGATED, FALSE_POSITIVE
+    status: str  # OPEN, INVESTIGATING, CONFIRMED, DISMISSED, MITIGATED, FALSE_POSITIVE
+    analyst_note: Optional[str] = None
 
 
 @router.post("/aggregate")
@@ -97,8 +98,8 @@ def update_case_status(
     update: CaseStatusUpdate,
     token: dict = Depends(decode_access_token),
 ):
-    """Update case status (e.g. INVESTIGATING, MITIGATED, FALSE_POSITIVE)."""
-    valid_statuses = ["OPEN", "INVESTIGATING", "MITIGATED", "FALSE_POSITIVE"]
+    """Update case status (e.g. INVESTIGATING, CONFIRMED, DISMISSED, MITIGATED, FALSE_POSITIVE)."""
+    valid_statuses = ["OPEN", "INVESTIGATING", "CONFIRMED", "DISMISSED", "MITIGATED", "FALSE_POSITIVE"]
     if update.status.upper() not in valid_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -106,10 +107,37 @@ def update_case_status(
         )
     storage = DuckDBStorage()
     try:
+        # Check if analyst_note column exists, add if needed
+        try:
+            storage.execute("ALTER TABLE threat_cases ADD COLUMN IF NOT EXISTS analyst_note VARCHAR")
+        except Exception:
+            pass
+
         storage.execute(
-            "UPDATE threat_cases SET status = ? WHERE case_id = ?",
-            (update.status.upper(), case_id),
+            "UPDATE threat_cases SET status = ?, analyst_note = ? WHERE case_id = ?",
+            (update.status.upper(), update.analyst_note or "", case_id),
         )
-        return {"case_id": case_id, "status": update.status.upper(), "message": "Status updated successfully"}
+
+        # Record audit event in user database
+        try:
+            from ...auth.auth import UsersDatabase
+            db = UsersDatabase(storage=storage)
+            username = token.get("sub", "analyst")
+            note_text = f" (Note: {update.analyst_note})" if update.analyst_note else ""
+            db.log_audit_event(
+                event_type="CASE_REVIEW",
+                username=username,
+                status="SUCCESS",
+                details=f"Case {case_id} status updated to {update.status.upper()}{note_text}",
+            )
+        except Exception:
+            pass
+
+        return {
+            "case_id": case_id,
+            "status": update.status.upper(),
+            "analyst_note": update.analyst_note or "",
+            "message": "Status and audit event updated successfully",
+        }
     finally:
         storage.close()

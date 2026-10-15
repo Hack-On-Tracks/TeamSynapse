@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 export default {
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, './src'),
       'lucide-react': path.resolve(__dirname, './src/icons.tsx'),
     },
   },
