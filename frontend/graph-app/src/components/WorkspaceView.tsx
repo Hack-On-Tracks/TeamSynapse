@@ -49,19 +49,7 @@ import { DEFAULT_FALLBACK_ELEMENTS } from '../App';
 
 // Realistic Enterprise Telemetry Stream Templates for 2-Second Live Ingestion
 const ENTERPRISE_STREAM_TEMPLATES = [
-  {
-    user_id: 'USR-049',
-    user_name: 'E049 (Fin Analyst)',
-    source_ip: '10.4.12.49',
-    destination_ip: '198.51.100.24',
-    hostname: 'backup-sync.storage.example.net',
-    method: 'POST',
-    status_code: 206,
-    base_bytes: 42500000,
-    threat_score: 94.2,
-    risk_level: 'CRITICAL',
-    alert_reason: 'Unscheduled volumetric backup exfiltration (>40 MB) over QUIC to cloud storage',
-  },
+  // --- LOW SEVERITY (Benign Daily Enterprise Baseline) ---
   {
     user_id: 'USR-102',
     user_name: 'E102 (DevOps Lead)',
@@ -74,19 +62,6 @@ const ENTERPRISE_STREAM_TEMPLATES = [
     threat_score: 8.5,
     risk_level: 'LOW',
     alert_reason: 'Standard baseline Git repository synchronization over HTTPS',
-  },
-  {
-    user_id: 'USR-028',
-    user_name: 'E028 (Compromised)',
-    source_ip: '10.4.12.28',
-    destination_ip: '203.0.113.14',
-    hostname: 'gfs270n113.userstorage.mega.co.nz',
-    method: 'POST',
-    status_code: 200,
-    base_bytes: 185000000,
-    threat_score: 96.8,
-    risk_level: 'CRITICAL',
-    alert_reason: 'Massive archive upload to personal storage platform outside enterprise domain',
   },
   {
     user_id: 'USR-012',
@@ -102,19 +77,6 @@ const ENTERPRISE_STREAM_TEMPLATES = [
     alert_reason: 'Routine employee portal benefits query conforming to peer baseline',
   },
   {
-    user_id: 'USR-028',
-    user_name: 'E028 (Compromised)',
-    source_ip: '10.4.12.28',
-    destination_ip: '198.51.100.99',
-    hostname: 'c2-beacon.tunnel-edge.net',
-    method: 'CONNECT',
-    status_code: 101,
-    base_bytes: 840000,
-    threat_score: 88.4,
-    risk_level: 'HIGH',
-    alert_reason: 'High entropy DNS tunneling sub-beacon query observed on UDP 53',
-  },
-  {
     user_id: 'USR-049',
     user_name: 'E049 (Fin Analyst)',
     source_ip: '10.4.12.49',
@@ -126,6 +88,101 @@ const ENTERPRISE_STREAM_TEMPLATES = [
     threat_score: 22.0,
     risk_level: 'LOW',
     alert_reason: 'Internal domain controller Kerberos ticket renewal',
+  },
+  {
+    user_id: 'USR-072',
+    user_name: 'E072 (Support Lead)',
+    source_ip: '10.8.1.72',
+    destination_ip: '54.230.12.44',
+    hostname: 'app.slack.com',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 12500,
+    threat_score: 6.2,
+    risk_level: 'LOW',
+    alert_reason: 'Real-time WebSocket heartbeat for enterprise communications',
+  },
+  {
+    user_id: 'USR-033',
+    user_name: 'E033 (Frontend Eng)',
+    source_ip: '10.4.15.33',
+    destination_ip: '104.16.19.94',
+    hostname: 'registry.npmjs.org',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 84000,
+    threat_score: 9.4,
+    risk_level: 'LOW',
+    alert_reason: 'Standard developer package registry manifest check',
+  },
+  {
+    user_id: 'USR-015',
+    user_name: 'E015 (Sales Director)',
+    source_ip: '10.2.8.15',
+    destination_ip: '162.247.243.29',
+    hostname: 'atlassian.net',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 36000,
+    threat_score: 14.8,
+    risk_level: 'LOW',
+    alert_reason: 'Sprint planning and project issue tracker navigation',
+  },
+
+  // --- MEDIUM SEVERITY (Elevated Behavioral Anomaly) ---
+  {
+    user_id: 'USR-043',
+    user_name: 'E043 (Product Analyst)',
+    source_ip: '10.4.15.43',
+    destination_ip: '198.51.100.40',
+    hostname: 's3.us-west-2.amazonaws.com',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 7800000,
+    threat_score: 52.4,
+    risk_level: 'MEDIUM',
+    alert_reason: 'Elevated outbound byte volume (7.8 MB) to cloud object store',
+  },
+  {
+    user_id: 'USR-061',
+    user_name: 'E061 (Accountant)',
+    source_ip: '10.6.3.61',
+    destination_ip: '198.51.100.18',
+    hostname: 'api.dropbox.com',
+    method: 'POST',
+    status_code: 200,
+    base_bytes: 4200000,
+    threat_score: 48.0,
+    risk_level: 'MEDIUM',
+    alert_reason: 'Third-party cloud storage sync from finance departmental subnet',
+  },
+  {
+    user_id: 'USR-088',
+    user_name: 'E088 (IT SysAdmin)',
+    source_ip: '10.4.1.88',
+    destination_ip: '10.0.8.22',
+    hostname: 'internal-git.corp.net',
+    method: 'POST',
+    status_code: 201,
+    base_bytes: 6500000,
+    threat_score: 42.5,
+    risk_level: 'MEDIUM',
+    alert_reason: 'Large source tree push to internal staging mirror after normal shift',
+  },
+
+  // --- HIGH SEVERITY (Threat Indicators & Suspicious Channels) ---
+  {
+    user_id: 'USR-028',
+    user_name: 'E028 (Compromised)',
+    source_ip: '10.4.12.28',
+    destination_ip: '198.51.100.99',
+    hostname: 'c2-beacon.tunnel-edge.net',
+    method: 'CONNECT',
+    status_code: 101,
+    base_bytes: 840000,
+    threat_score: 84.4,
+    risk_level: 'HIGH',
+    alert_reason: 'High entropy DNS tunneling sub-beacon query observed on UDP 53',
   },
   {
     user_id: 'USR-061',
@@ -141,25 +198,71 @@ const ENTERPRISE_STREAM_TEMPLATES = [
     alert_reason: 'Tier-3 Financial transaction webhook initiated during off-hours',
   },
   {
-    user_id: 'USR-072',
-    user_name: 'E072 (Support Lead)',
-    source_ip: '10.8.1.72',
-    destination_ip: '54.230.12.44',
-    hostname: 'app.slack.com',
-    method: 'GET',
+    user_id: 'USR-028',
+    user_name: 'E028 (Compromised)',
+    source_ip: '10.4.12.28',
+    destination_ip: '185.220.101.5',
+    hostname: 'tor-exit.relay-node.org',
+    method: 'CONNECT',
+    status_code: 403,
+    base_bytes: 310000,
+    threat_score: 79.5,
+    risk_level: 'HIGH',
+    alert_reason: 'Repeated unauthorized gateway connection attempt to suspected anonymizer relay',
+  },
+
+  // --- CRITICAL SEVERITY (Severe Volumetric Exfiltration & C2 Apex) ---
+  {
+    user_id: 'USR-049',
+    user_name: 'E049 (Fin Analyst)',
+    source_ip: '10.4.12.49',
+    destination_ip: '198.51.100.24',
+    hostname: 'backup-sync.storage.example.net',
+    method: 'POST',
+    status_code: 206,
+    base_bytes: 42500000,
+    threat_score: 94.2,
+    risk_level: 'CRITICAL',
+    alert_reason: 'Unscheduled volumetric backup exfiltration (>40 MB) over QUIC to cloud storage',
+  },
+  {
+    user_id: 'USR-028',
+    user_name: 'E028 (Compromised)',
+    source_ip: '10.4.12.28',
+    destination_ip: '203.0.113.14',
+    hostname: 'gfs270n113.userstorage.mega.co.nz',
+    method: 'POST',
     status_code: 200,
-    base_bytes: 12500,
-    threat_score: 6.2,
-    risk_level: 'LOW',
-    alert_reason: 'Real-time WebSocket heartbeat for enterprise communications',
+    base_bytes: 185000000,
+    threat_score: 96.8,
+    risk_level: 'CRITICAL',
+    alert_reason: 'Massive archive upload to personal storage platform outside enterprise domain',
+  },
+  {
+    user_id: 'USR-049',
+    user_name: 'E049 (Fin Analyst)',
+    source_ip: '10.4.12.49',
+    destination_ip: '198.51.100.77',
+    hostname: 'offsite-db-dump.cloud-vault.io',
+    method: 'PUT',
+    status_code: 200,
+    base_bytes: 74000000,
+    threat_score: 91.5,
+    risk_level: 'CRITICAL',
+    alert_reason: 'Direct volumetric database dump transfer to unauthorized external IP',
   },
 ];
 
 const generateInitialSeedLogs = () => {
   const now = Date.now();
-  return ENTERPRISE_STREAM_TEMPLATES.map((tmpl, idx) => {
+  // Randomly shuffle templates so initial seed sequence has a natural random distribution of classifications
+  const shuffled = [...ENTERPRISE_STREAM_TEMPLATES].sort(() => Math.random() - 0.5).slice(0, 10);
+  return shuffled.map((tmpl, idx) => {
     const time = new Date(now - (idx + 1) * 2000).toISOString();
     const isAnomaly = tmpl.risk_level === 'CRITICAL' || tmpl.risk_level === 'HIGH';
+    const jitterFactor = 0.8 + Math.random() * 0.4;
+    const scoreJitter = (Math.random() * 3 - 1.5);
+    const score = Math.max(3.0, Math.min(99.0, Number((tmpl.threat_score + scoreJitter).toFixed(1))));
     return {
       log_id: `LOG-INIT-${String(1000 + idx)}`,
       timestamp: time,
@@ -170,8 +273,8 @@ const generateInitialSeedLogs = () => {
       hostname: tmpl.hostname,
       method: tmpl.method,
       status_code: tmpl.status_code,
-      bytes_sent: tmpl.base_bytes,
-      threat_score: tmpl.threat_score,
+      bytes_sent: Math.round(tmpl.base_bytes * jitterFactor),
+      threat_score: score,
       risk_level: tmpl.risk_level,
       is_anomaly: isAnomaly,
       alert_reason: tmpl.alert_reason,
@@ -240,6 +343,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   const [isLiveStreamActive, setIsLiveStreamActive] = useState<boolean>(true);
   const [streamCountdown, setStreamCountdown] = useState<number>(2.0);
   const streamSeqRef = React.useRef<number>(0);
+  const lastStreamIdxRef = React.useRef<number>(-1);
 
   const flowStream = useFlowStream();
 
@@ -516,14 +620,23 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   useEffect(() => {
     if (!isLiveStreamActive || view !== '⚡ 2s Live Stream') return;
 
-    // Helper to generate the next real-time web log packet with jitter
+    // Helper to generate the next real-time web log packet with randomized selection
     const synthesizeNextPacket = () => {
-      const idx = streamSeqRef.current % ENTERPRISE_STREAM_TEMPLATES.length;
-      streamSeqRef.current += 1;
-      const tmpl = ENTERPRISE_STREAM_TEMPLATES[idx];
-      const jitterFactor = 0.85 + Math.random() * 0.35;
+      // Pick a random template, avoiding consecutive duplicate events
+      let randomIdx = Math.floor(Math.random() * ENTERPRISE_STREAM_TEMPLATES.length);
+      if (randomIdx === lastStreamIdxRef.current) {
+        randomIdx = (randomIdx + 1 + Math.floor(Math.random() * (ENTERPRISE_STREAM_TEMPLATES.length - 1))) % ENTERPRISE_STREAM_TEMPLATES.length;
+      }
+      lastStreamIdxRef.current = randomIdx;
+
+      const tmpl = ENTERPRISE_STREAM_TEMPLATES[randomIdx];
+      const jitterFactor = 0.75 + Math.random() * 0.5;
       const bytes = Math.round(tmpl.base_bytes * jitterFactor);
       const isAnomaly = tmpl.risk_level === 'CRITICAL' || tmpl.risk_level === 'HIGH';
+
+      // Natural score variance within classification band
+      const scoreJitter = (Math.random() * 4 - 2);
+      const score = Math.max(3.0, Math.min(99.0, Number((tmpl.threat_score + scoreJitter).toFixed(1))));
 
       const nextLog = {
         log_id: `LOG-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
@@ -536,7 +649,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
         method: tmpl.method,
         status_code: tmpl.status_code,
         bytes_sent: bytes,
-        threat_score: Number((tmpl.threat_score + (Math.random() * 2 - 1)).toFixed(1)),
+        threat_score: score,
         risk_level: tmpl.risk_level,
         is_anomaly: isAnomaly,
         alert_reason: tmpl.alert_reason,
