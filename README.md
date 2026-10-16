@@ -60,24 +60,39 @@ graph TD
 - **Tier 3 — Local GPU LLM Verification (`Ollama Qwen3:4b`)**: Offline inference with 26/37 layers offloaded to NVIDIA RTX CUDA VRAM. Produces deep Chain-of-Thought (CoT) reasoning, MITRE ATT&CK mapping, and role-based operational analysis.
 - **Tier 4 — Consensus Triangulation & False-Positive Elimination**: Cross-corroborates alerts across all 3 engines. Safely suppresses authorized operational tasks (e.g., nightly DBA database backups to AWS S3, CI/CD pipeline mirror syncs) to eliminate alert fatigue.
 
-### 2. 🛡️ Host Isolation & Containment Posture Management
-- **Interactive Isolation Dialog**: One-click host containment triggered from the Investigation Engine.
-- **Triage State Tracking**:
-  - `🟡 Open`: Active monitoring and continuous anomaly baseline tracking.
-  - `🔵 Under Investigation`: Assigned to senior SOC analyst queue; logging telemetry frequency elevated.
-  - `🔴 Threat (Isolated)`: Endpoint disconnected from subnet routing, credentials revoked, active sockets severed.
-  - `🟢 Dismissed`: Legitimate operational workflow excluded from escalation.
-- **Analyst Audit Log**: Justifications, quarantine parameters, and mitigation notes are persisted directly to the analytical database.
+### 2. 🛡️ Investigation Case Manager & Containment Posture
+- **Interactive Deep Forensics Dialog**: One-click case details modal accessible across all 4 investigation categories with risk score telemetry, anomaly rationale, and 4-tier engine consensus breakdown.
+- **Dynamic 4-State Triage & Table Synchronization**:
+  - `🟡 Open`: Initial anomaly detection pending analyst review.
+  - `🔵 Under Investigation`: Assigned to active SOC investigation queue.
+  - `🔴 Threat Detected`: Host isolated, network sockets severed, and credentials suspended.
+  - `🟢 Safe / Normal`: Baseline verified; false alarm suppressed.
+  *State changes made in the modal reflect instantly in the investigation table.*
+- **Built-in Executive Incident Email Dispatcher**: Send HTML incident briefs directly to any designated email address with real-time SMTP feedback.
 
 ### 3. ⏪ Temporal Replay Forensic Scrubber
 - **12-Step Progressive Forensic Timeline**: Step through 14 days of an insider threat lifecycle (baseline operations, DNS enumeration, internal reconnaissance, database dumps, staging, C2 beaconing, multi-hundred MB exfiltration, and SOC mitigation).
 - **In-Place Cytoscape Batch Updates**: Zero-flicker WebGL/Canvas rendering with hardware-accelerated node size, opacity, and severity color shifts (`cy.batch(...)`).
 - **Dynamic Forensic HUD**: Live MITRE ATT&CK technique breakdown, source/target entities, volume transmitted, and investigator guidance per frame.
 
-### 4. 🌍 Live Global OpenStreetMap Geolocation
-- **Dual Tile Layers**: High-resolution **Satellite View** (Esri World Imagery) and high-contrast **Dark Roads View** (CartoDB Dark Matter).
-- **Interactive Live Packet Simulation**: Real-time curved geodesic packet trajectories streaming from the corporate network origin to global command servers, C2 nodes, and unauthorized cloud buckets across the world.
-- **Per-Country Geo-Telemetry**: Instant inspection of destination IP, country, risk score, protocol (TLS 1.3, QUIC, SSH, Wire Transfer), and packet hop counts.
+### 4. 🌍 Live Global Threat Map & 9 Cartography Engines
+- **9 Multi-Engine Basemap Gallery**:
+  - **🕶️ Cyber Dark Canvas**: Esri Dark Gray Base for 24/7 SOC night operations.
+  - **🛰️ Satellite Imagery**: Ultra high-resolution Esri World Imagery orbital photography.
+  - **🗺️ OpenStreetMap**: Standard collaborative global road and municipal grid.
+  - **🏔️ Topographic Terrain**: Contour lines, elevation relief, and mountain corridors.
+  - **🛣️ World Streets**: Transport highways, city borders, and urban transit routes.
+  - **🧭 National Geographic**: Renowned editorial styling for geopolitical boundary context.
+  - **🌊 Ocean Bathymetry**: Continental shelves, submarine trenches & transoceanic fiber cable routes.
+  - **🌍 Physical Earth Relief**: Landcover biomes, natural elevations, and physical terrain.
+  - **☀️ Clean Light Canvas**: High-contrast minimalist light mode for executive briefing rooms.
+- **Laptop In-Built Hardware GPS Integration**:
+  - Direct hardware sensor access with high-accuracy satellite/Wi-Fi fix.
+  - Live coordinates display with 6-decimal-place precision, elevation, and ground velocity.
+  - Dynamic Leaflet GPS accuracy circle (`±meters`) showing hardware uncertainty bounds.
+  - Real-time continuous tracking toggle (`navigator.geolocation.watchPosition`).
+  - Automatic exfiltration trajectory re-anchoring directly from the user's laptop location.
+- **Interactive Live Packet Simulation**: Real-time curved geodesic packet trajectories streaming at 2.0s intervals to 9 global command servers and unauthorized storage buckets.
 
 ### 5. ⚡ Real-Time 2-Second Live Log Stream
 - **Sub-Second Polling Engine**: Continuous 2.0s streaming ingestion simulating active enterprise firewall and proxy traffic.
