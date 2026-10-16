@@ -1509,3 +1509,151 @@ h2 {
   }
 }
 
+/* ========================================================================= */
+/* CIPHERSENTINEL INVESTIGATION DETAILS MODAL (HIGH CONTRAST OPAQUE POPUP)   */
+/* ========================================================================= */
+.inv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: rgba(2, 6, 15, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.inv-modal-container {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  background-color: #0a1329;
+  border: 2px solid #38bdf8;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 40px rgba(56, 189, 248, 0.25);
+  overflow: hidden;
+  margin: auto;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-modal-header {
+  background: linear-gradient(90deg, #0e1d3d 0%, #0a1329 100%);
+  padding: 1.15rem 1.5rem;
+  border-bottom: 2px solid #1e2f52;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.inv-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.inv-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inv-modal-body::-webkit-scrollbar-track {
+  background: #070e1f;
+}
+
+.inv-modal-body::-webkit-scrollbar-thumb {
+  background: #1f3661;
+  border-radius: 4px;
+}
+
+.inv-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+.inv-modal-card {
+  background-color: #0e1b38;
+  border: 1.5px solid #1f335b;
+  border-radius: 12px;
+  padding: 1.15rem;
+}
+
+.inv-modal-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .inv-modal-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.inv-status-btn {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  border: 2px solid #1e2d4d;
+  background-color: #070e1c;
+  color: #94a3b8;
+}
+
+.inv-status-btn:hover {
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.inv-status-btn.active-threat {
+  background-color: rgba(220, 38, 38, 0.4);
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.45);
+}
+
+.inv-status-btn.active-investigation {
+  background-color: rgba(217, 119, 6, 0.4);
+  border-color: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.45);
+}
+
+.inv-status-btn.active-open {
+  background-color: rgba(2, 132, 199, 0.4);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.45);
+}
+
+.inv-status-btn.active-safe {
+  background-color: rgba(5, 150, 105, 0.4);
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.45);
+}
+
+.inv-meter-bg {
+  width: 100%;
+  height: 12px;
+  background-color: #060b17;
+  border-radius: 9999px;
+  border: 1.5px solid #1e2f52;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+
