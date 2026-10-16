@@ -161,6 +161,159 @@ const GLOBAL_DESTINATIONS: DestinationIP[] = [
   },
 ];
 
+export type MapTypeKey = 'dark' | 'satellite' | 'osm' | 'topo' | 'streets' | 'natgeo' | 'ocean' | 'physical' | 'light';
+
+export interface MapTypeConfig {
+  id: MapTypeKey;
+  label: string;
+  category: 'Tactical' | 'Imagery' | 'Street' | 'Terrain' | 'Maritime' | 'Editorial';
+  categoryClass: string;
+  icon: string;
+  providerName: string;
+  description: string;
+  recommendedFor: string;
+  url: string;
+  options: any;
+}
+
+export const MAP_PROVIDERS: Record<MapTypeKey, MapTypeConfig> = {
+  dark: {
+    id: 'dark',
+    label: 'Cyber Dark Canvas',
+    category: 'Tactical',
+    categoryClass: 'cat-tactical',
+    icon: '🕶️',
+    providerName: 'Esri Dark Gray Canvas',
+    description: 'High-contrast midnight dark canvas engineered for SOC packet trajectory tracing & nocturnal threat detection.',
+    recommendedFor: '24/7 Security Operations & Incident Response Displays',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; World Dark Gray Base',
+    },
+  },
+  satellite: {
+    id: 'satellite',
+    label: 'Satellite Imagery',
+    category: 'Imagery',
+    categoryClass: 'cat-imagery',
+    icon: '🛰️',
+    providerName: 'Esri World Imagery',
+    description: 'Ultra high-resolution real orbital satellite and aerial photography with seamless global ground coverage.',
+    recommendedFor: 'Physical Datacenter Reconnaissance & Real-world Geo Analysis',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; World Imagery',
+    },
+  },
+  osm: {
+    id: 'osm',
+    label: 'OpenStreetMap',
+    category: 'Street',
+    categoryClass: 'cat-street',
+    icon: '🗺️',
+    providerName: 'OpenStreetMap Standard',
+    description: 'World-standard collaborative open-source street map with rich municipal data, boundaries, and street networks.',
+    recommendedFor: 'Metropolitan Server Host IP Geolocation & Public Verification',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  topo: {
+    id: 'topo',
+    label: 'Topographic Terrain',
+    category: 'Terrain',
+    categoryClass: 'cat-terrain',
+    icon: '🏔️',
+    providerName: 'Esri World Topographic',
+    description: 'Contour lines, elevation relief shading, mountain ranges, hydrological networks, and geographic landmarks.',
+    recommendedFor: 'Regional Physical Infrastructure & Elevation Corridor Tracing',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; World Topographic Map',
+    },
+  },
+  streets: {
+    id: 'streets',
+    label: 'World Streets',
+    category: 'Street',
+    categoryClass: 'cat-street',
+    icon: '🛣️',
+    providerName: 'Esri World Street Map',
+    description: 'Comprehensive transport highways, arterial road networks, urban borders, points of interest, and railways.',
+    recommendedFor: 'City-level Urban Transit & Ground Node Identification',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; World Street Map',
+    },
+  },
+  natgeo: {
+    id: 'natgeo',
+    label: 'National Geographic',
+    category: 'Editorial',
+    categoryClass: 'cat-editorial',
+    icon: '🧭',
+    providerName: 'National Geographic Society',
+    description: 'Acclaimed National Geographic editorial cartography featuring historic typography, shaded relief, and boundary delineation.',
+    recommendedFor: 'Geopolitical Threat Boundary & State-Sponsored Actor Context',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; National Geographic World Map',
+    },
+  },
+  ocean: {
+    id: 'ocean',
+    label: 'Ocean Bathymetry',
+    category: 'Maritime',
+    categoryClass: 'cat-maritime',
+    icon: '🌊',
+    providerName: 'Esri World Ocean Base',
+    description: 'Marine continental shelves, deep sea trenches, bathymetric depth gradients & submarine cable corridors.',
+    recommendedFor: 'Transoceanic Submarine Internet Fiber Cable Telemetry',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 13,
+      attribution: 'Tiles &copy; Esri &mdash; World Ocean Base',
+    },
+  },
+  physical: {
+    id: 'physical',
+    label: 'Physical Earth Relief',
+    category: 'Terrain',
+    categoryClass: 'cat-terrain',
+    icon: '🌍',
+    providerName: 'Esri World Physical',
+    description: 'Natural landcover textures, elevations, desert biomes, vegetation, and shaded continental mountain relief.',
+    recommendedFor: 'Geographical Environment & Transcontinental Routing',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 8,
+      attribution: 'Tiles &copy; Esri &mdash; World Physical Map',
+    },
+  },
+  light: {
+    id: 'light',
+    label: 'Clean Light Canvas',
+    category: 'Tactical',
+    categoryClass: 'cat-tactical',
+    icon: '☀️',
+    providerName: 'Esri Light Gray Canvas',
+    description: 'Minimalist high-contrast light cartography designed for brightly lit command stations and incident rooms.',
+    recommendedFor: 'Daylight Situation Rooms & High-ambient Office Screens',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; World Light Gray Base',
+    },
+  },
+};
+
 export const LiveGeoThreatMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -175,43 +328,10 @@ export const LiveGeoThreatMap: React.FC = () => {
     accuracy: 25,
   });
   const [geoStatus, setGeoStatus] = useState<string>('Detecting live geolocation...');
-  const [mapMode, setMapMode] = useState<'osm' | 'satellite' | 'streets' | 'dark'>('osm');
+  const [mapMode, setMapMode] = useState<MapTypeKey>('dark');
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [lastTransmission, setLastTransmission] = useState<any | null>(null);
-
-  // Tile layer configuration (OpenStreetMap & MediTrack ArcGIS: No API Key Required)
-  const TILE_PROVIDERS: Record<string, { url: string; options: any }> = {
-    osm: {
-      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      options: {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      },
-    },
-    satellite: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      options: {
-        maxZoom: 19,
-        attribution: 'Tiles &copy; Esri &mdash; World Imagery',
-      },
-    },
-    streets: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-      options: {
-        maxZoom: 19,
-        attribution: 'Tiles &copy; Esri &mdash; World Street Map',
-      },
-    },
-    dark: {
-      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      options: {
-        maxZoom: 19,
-        className: 'osm-cyber-dark-tiles',
-        attribution: '&copy; OpenStreetMap (Cyber Dark)',
-      },
-    },
-  };
 
   // 1. Obtain browser live location
   useEffect(() => {
@@ -260,7 +380,7 @@ export const LiveGeoThreatMap: React.FC = () => {
     mapRef.current = map;
 
     // Add Initial Tile Layer
-    const provider = TILE_PROVIDERS[mapMode] || TILE_PROVIDERS.osm;
+    const provider = MAP_PROVIDERS[mapMode] || MAP_PROVIDERS.dark;
     tileLayerRef.current = L.tileLayer(provider.url, provider.options).addTo(map);
 
     // Add Layer Groups for lines & markers
@@ -268,6 +388,22 @@ export const LiveGeoThreatMap: React.FC = () => {
 
     // Zoom control in top right
     L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // Add Leaflet Native Layer Control with all 9 basemaps
+    const baseLayers: Record<string, any> = {};
+    Object.keys(MAP_PROVIDERS).forEach(key => {
+      const p = MAP_PROVIDERS[key as MapTypeKey];
+      baseLayers[`${p.icon} ${p.label}`] = L.tileLayer(p.url, p.options);
+    });
+    L.control.layers(baseLayers, undefined, { position: 'topright', collapsed: true }).addTo(map);
+
+    // Sync external Leaflet layer control changes back to React state
+    map.on('baselayerchange', (e: any) => {
+      const match = Object.entries(MAP_PROVIDERS).find(([_, v]) => `${v.icon} ${v.label}` === e.name);
+      if (match) {
+        setMapMode(match[0] as MapTypeKey);
+      }
+    });
 
     renderMapMarkers();
 
@@ -283,8 +419,11 @@ export const LiveGeoThreatMap: React.FC = () => {
   useEffect(() => {
     if (!mapRef.current || !tileLayerRef.current) return;
     mapRef.current.removeLayer(tileLayerRef.current);
-    const provider = TILE_PROVIDERS[mapMode] || TILE_PROVIDERS.osm;
+    const provider = MAP_PROVIDERS[mapMode] || MAP_PROVIDERS.dark;
     tileLayerRef.current = L.tileLayer(provider.url, provider.options).addTo(mapRef.current);
+    if (tileLayerRef.current.bringToBack) {
+      tileLayerRef.current.bringToBack();
+    }
   }, [mapMode]);
 
   // 4. Render Markers and Current Location on Map
@@ -466,7 +605,7 @@ export const LiveGeoThreatMap: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Globe2 className="text-cyan-400" size={20} />
             <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-              OpenStreetMap Global Packet Telemetry Map
+              Live Global Cyber Attack & Exfiltration Map
             </h2>
             <span
               style={{
@@ -486,89 +625,23 @@ export const LiveGeoThreatMap: React.FC = () => {
             <span>{geoStatus}</span>
             <span>&bull;</span>
             <span>
-              Target Coordinates:{' '}
+              Origin Coordinates:{' '}
               <strong style={{ color: '#f8fafc' }}>
                 {liveLocation.lat.toFixed(4)}° N, {liveLocation.lng.toFixed(4)}° E
+              </strong>
+            </span>
+            <span>&bull;</span>
+            <span>
+              Telemetry Stream:{' '}
+              <strong style={{ color: isStreaming ? '#34d399' : '#f87171' }}>
+                {isStreaming ? 'CONNECTED (2.0s)' : 'PAUSED'}
               </strong>
             </span>
           </div>
         </div>
 
-        {/* View Mode & Stream Controls */}
+        {/* Stream Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Map Layer Switcher: Satellite / Roads / Dark */}
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              padding: 3,
-              borderRadius: 6,
-              display: 'flex',
-              gap: 4,
-              border: '1px solid var(--border-color)',
-            }}
-          >
-            <button
-              onClick={() => setMapMode('osm')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                background: mapMode === 'osm' ? '#0284c7' : 'transparent',
-                color: mapMode === 'osm' ? '#ffffff' : 'var(--text-muted)',
-              }}
-            >
-              🗺️ OpenStreetMap
-            </button>
-            <button
-              onClick={() => setMapMode('satellite')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                background: mapMode === 'satellite' ? '#0284c7' : 'transparent',
-                color: mapMode === 'satellite' ? '#ffffff' : 'var(--text-muted)',
-              }}
-            >
-              🛰️ Satellite (ArcGIS)
-            </button>
-            <button
-              onClick={() => setMapMode('streets')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                background: mapMode === 'streets' ? '#0284c7' : 'transparent',
-                color: mapMode === 'streets' ? '#ffffff' : 'var(--text-muted)',
-              }}
-            >
-              🛣️ Streets (ArcGIS)
-            </button>
-            <button
-              onClick={() => setMapMode('dark')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                background: mapMode === 'dark' ? '#0284c7' : 'transparent',
-                color: mapMode === 'dark' ? '#ffffff' : 'var(--text-muted)',
-              }}
-            >
-              🕶️ Cyber Dark (OSM)
-            </button>
-          </div>
-
           {/* Stream Toggle */}
           <button
             onClick={() => setIsStreaming(!isStreaming)}
@@ -577,13 +650,14 @@ export const LiveGeoThreatMap: React.FC = () => {
               color: isStreaming ? '#f87171' : '#34d399',
               border: `1px solid ${isStreaming ? '#ef4444' : '#10b981'}`,
               borderRadius: 6,
-              padding: '6px 12px',
+              padding: '7px 14px',
               fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
+              boxShadow: isStreaming ? '0 0 10px rgba(239, 68, 68, 0.25)' : '0 0 10px rgba(16, 185, 129, 0.25)',
             }}
           >
             {isStreaming ? <Pause size={14} /> : <Play size={14} />}
@@ -598,19 +672,89 @@ export const LiveGeoThreatMap: React.FC = () => {
               color: '#ffffff',
               border: 'none',
               borderRadius: 6,
-              padding: '6px 12px',
+              padding: '7px 14px',
               fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
+              boxShadow: '0 0 12px rgba(2, 132, 199, 0.4)',
             }}
           >
             <Send size={14} />
             SEND TEST PACKET
           </button>
         </div>
+      </div>
+
+      {/* Cartographic Multi-Engine Selector Gallery */}
+      <div className="map-engine-gallery-wrapper">
+        <div className="map-gallery-header">
+          <div className="map-gallery-title-box">
+            <Layers className="text-cyan-400" size={17} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Global Map Cartography Engines
+            </span>
+            <span className="map-gallery-badge-count">9 Types Available</span>
+          </div>
+          <div style={{ fontSize: '0.76rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Active Layer:</span>
+            <strong style={{ color: '#38bdf8' }}>
+              {MAP_PROVIDERS[mapMode]?.icon} {MAP_PROVIDERS[mapMode]?.label}
+            </strong>
+            <span style={{ color: '#475569' }}>|</span>
+            <span style={{ color: '#cbd5e1' }}>{MAP_PROVIDERS[mapMode]?.providerName}</span>
+          </div>
+        </div>
+
+        {/* 9 Map Engine Cards */}
+        <div className="map-gallery-grid">
+          {(Object.keys(MAP_PROVIDERS) as MapTypeKey[]).map(key => {
+            const config = MAP_PROVIDERS[key];
+            const isActive = mapMode === key;
+            return (
+              <div
+                key={key}
+                onClick={() => setMapMode(key)}
+                className={`map-engine-card ${isActive ? 'active-map-card' : ''}`}
+                title={config.description}
+              >
+                {isActive && <div className="map-active-indicator" />}
+                <div className="map-card-top">
+                  <span className="map-card-icon">{config.icon}</span>
+                  <span className={`map-card-cat-badge ${config.categoryClass}`}>{config.category}</span>
+                </div>
+                <div className="map-card-name" style={{ color: isActive ? '#38bdf8' : '#f8fafc' }}>
+                  {config.label}
+                </div>
+                <div className="map-card-provider">{config.providerName}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Active Map Engine Details Panel */}
+        {MAP_PROVIDERS[mapMode] && (
+          <div className="map-detail-strip">
+            <div className="map-detail-desc">
+              <span style={{ fontSize: '1.1rem' }}>{MAP_PROVIDERS[mapMode].icon}</span>
+              <span>
+                <strong style={{ color: '#38bdf8' }}>{MAP_PROVIDERS[mapMode].label}:</strong>{' '}
+                {MAP_PROVIDERS[mapMode].description}
+              </span>
+            </div>
+            <div className="map-detail-meta">
+              <span>
+                🎯 <strong style={{ color: '#f8fafc' }}>Use Case:</strong> {MAP_PROVIDERS[mapMode].recommendedFor}
+              </span>
+              <span>&bull;</span>
+              <span>
+                ⚡ Max Zoom: <strong style={{ color: '#38bdf8' }}>{MAP_PROVIDERS[mapMode].options.maxZoom}x</strong>
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Map Container */}
