@@ -196,7 +196,18 @@ if api_online and not st.session_state.auth_token:
         pass
 
 
-# ==========================================
+def safe_style_gradient(df: pd.DataFrame, subset: list[str], cmap: str = "Reds"):
+    """Safely apply background_gradient if matplotlib is available, otherwise return unstyled DataFrame."""
+    try:
+        import matplotlib  # noqa: F401
+        valid_cols = [c for c in subset if c in df.columns and pd.api.types.is_numeric_dtype(df[c])]
+        if valid_cols:
+            return df.style.background_gradient(subset=valid_cols, cmap=cmap)
+    except Exception:
+        pass
+    return df
+
+
 # SIDEBAR CONTROLS & NAVIGATION
 # ==========================================
 with st.sidebar:
@@ -245,6 +256,7 @@ with st.sidebar:
         "Navigation",
         [
             "🔍 Threat Investigation (Multi-Layer Engine)",
+            "🔴 Live Simulation (n8n Web Log Stream)",
             "Executive SOC Overview",
             "Data Ingestion & Detectors",
             "Cross-Table Scoring",
@@ -309,14 +321,9 @@ def check_ollama_direct() -> dict:
 
 def get_consensus_data(limit: int = 50, live_ollama: bool = False) -> list:
     res = api_get("/score/consensus", params={"limit": limit, "live_ollama": live_ollama})
-    if isinstance(res, list) and res:
+    if isinstance(res, list):
         return res
-    try:
-        from backend.scoring.consensus import ConsensusEngine
-        ce = ConsensusEngine()
-        return ce.run_all_consensus(limit=limit, live_ollama=live_ollama)
-    except Exception:
-        return []
+    return []
 
 
 # ==========================================
@@ -423,7 +430,7 @@ if page == "🔍 Threat Investigation (Multi-Layer Engine)":
                 })
             rule_df = pd.DataFrame(rule_rows)
             st.dataframe(
-                rule_df.style.background_gradient(subset=["Rule Score"], cmap="Reds"),
+                safe_style_gradient(rule_df, ["Rule Score"], cmap="Reds"),
                 use_container_width=True,
                 hide_index=True,
             )
@@ -541,7 +548,7 @@ if page == "🔍 Threat Investigation (Multi-Layer Engine)":
                 })
             ml_df = pd.DataFrame(ml_rows)
             st.dataframe(
-                ml_df.style.background_gradient(subset=["ML Anomaly Score (%)"], cmap="Purples"),
+                safe_style_gradient(ml_df, ["ML Anomaly Score (%)"], cmap="Purples"),
                 use_container_width=True,
                 hide_index=True,
             )
@@ -794,7 +801,7 @@ if page == "🔍 Threat Investigation (Multi-Layer Engine)":
                     })
                 common_df = pd.DataFrame(common_rows)
                 st.dataframe(
-                    common_df.style.background_gradient(subset=["Final Calibrated Risk"], cmap="Reds"),
+                    safe_style_gradient(common_df, ["Final Calibrated Risk"], cmap="Reds"),
                     use_container_width=True,
                     hide_index=True,
                 )
@@ -822,7 +829,7 @@ if page == "🔍 Threat Investigation (Multi-Layer Engine)":
                     })
                 fp_df = pd.DataFrame(fp_rows)
                 st.dataframe(
-                    fp_df.style.background_gradient(subset=["De-escalated Score"], cmap="Greens_r"),
+                    safe_style_gradient(fp_df, ["De-escalated Score"], cmap="Greens_r"),
                     use_container_width=True,
                     hide_index=True,
                 )
@@ -1439,3 +1446,153 @@ elif page == "Audit Trail & Settings":
             "Detector Model": "Scikit-Learn IsolationForest + Rule Fusion",
             "GenAI Endpoint": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api"),
         })
+
+
+# ==========================================
+# PAGE: LIVE SIMULATION (n8n WEB LOG STREAM)
+# ==========================================
+elif page == "🔴 Live Simulation (n8n Web Log Stream)":
+    st.markdown("## 🔴 Live Web Log Stream & n8n Simulation Center")
+    st.caption("Real-time telemetry ingestion pipeline: web logs fed 1-by-1 every 2 seconds via n8n automated workflow.")
+
+    stream_res = api_get("/data/stream-logs", params={"limit": 60})
+    raw_logs = stream_res.get("logs", []) if isinstance(stream_res, dict) else []
+    total_buffered = stream_res.get("total_buffered", len(raw_logs)) if isinstance(stream_res, dict) else len(raw_logs)
+
+    # Top Control Bar
+    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
+    with ctrl_col1:
+        auto_refresh = st.checkbox("⚡ Auto-refresh live feed (every 2s)", value=False, help="Polls the backend every 2 seconds to display logs streamed by n8n.")
+    with ctrl_col2:
+        if st.button("🔄 Refresh Stream"):
+            st.rerun()
+    with ctrl_col3:
+        if st.button("🗑️ Clear Buffer"):
+            api_post("/data/stream-logs", json_data={}) # Or call DELETE
+            requests.delete(f"{API_BASE}/data/stream-logs", headers=get_headers())
+            st.rerun()
+
+    # Metrics
+    anomalies_count = sum(1 for log in raw_logs if log.get("is_anomaly"))
+    threat_rate = round(anomalies_count / max(len(raw_logs), 1) * 100, 1) if raw_logs else 0.0
+    highest_score = max([log.get("threat_score", 0) for log in raw_logs], default=0.0)
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(
+            f"""<div class='metric-card'>
+            <div class='metric-title'>Total Streamed Logs</div>
+            <div class='metric-value'>{total_buffered}</div>
+            <div class='metric-sub'>Ingested via n8n webhook</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with m2:
+        st.markdown(
+            f"""<div class='metric-card'>
+            <div class='metric-title'>Live Anomalies</div>
+            <div class='metric-value' style='color:#ef4444;'>{anomalies_count}</div>
+            <div class='metric-sub'>{threat_rate}% of incoming traffic</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with m3:
+        st.markdown(
+            f"""<div class='metric-card'>
+            <div class='metric-title'>Max Threat Score</div>
+            <div class='metric-value' style='color:#f59e0b;'>{highest_score:.1f}</div>
+            <div class='metric-sub'>Scale 0 - 100</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with m4:
+        st.markdown(
+            f"""<div class='metric-card'>
+            <div class='metric-title'>Ingestion Interval</div>
+            <div class='metric-value' style='color:#10b981;'>2.0s</div>
+            <div class='metric-sub'>Controlled by n8n Wait node</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div class='cyber-divider'></div>", unsafe_allow_html=True)
+
+    # Display Live Log Feed Table
+    st.subheader("📡 Live Ingestion Telemetry Stream")
+    if raw_logs:
+        log_rows = []
+        for l in raw_logs:
+            is_anom = l.get("is_anomaly", False)
+            sev = l.get("risk_level", "LOW")
+            sev_badge = "🔴 CRITICAL" if sev == "CRITICAL" else "🟠 HIGH" if sev == "HIGH" else "🟡 MEDIUM" if sev == "MEDIUM" else "🟢 NORMAL"
+            log_rows.append({
+                "Timestamp": str(l.get("timestamp", ""))[-12:-4] if "T" in str(l.get("timestamp", "")) else str(l.get("timestamp", ""))[:19],
+                "Entity / User": l.get("user_id", "USR-001"),
+                "Source IP": l.get("source_ip", "10.0.0.1"),
+                "Destination": l.get("hostname") or l.get("destination_ip"),
+                "Method": l.get("method", "GET"),
+                "Status": l.get("status_code", 200),
+                "Bytes Out": f"{(l.get('bytes_sent', 0) / 1024):,.1f} KB" if l.get('bytes_sent', 0) < 1048576 else f"{(l.get('bytes_sent', 0) / 1048576):,.2f} MB",
+                "Risk Score": f"{l.get('threat_score', 0):.1f}",
+                "Classification": sev_badge,
+                "Threat Indicator": l.get("alert_reason", "Baseline traffic"),
+            })
+        st.dataframe(pd.DataFrame(log_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("No streaming logs received yet. Start the n8n Live Simulation workflow or click 'Send Demo Log' below.")
+
+    # Local Tester & n8n Endpoint Reference
+    st.markdown("<div class='cyber-divider'></div>", unsafe_allow_html=True)
+    col_demo, col_n8n_guide = st.columns([1, 1])
+
+    with col_demo:
+        st.subheader("🧪 Test Live Injection Directly")
+        st.caption("Send simulated web log immediately to test backend ingestion:")
+        test_type = st.selectbox("Select Log Scenario", [
+            "Normal Browsing (Google Docs, 12KB)",
+            "Cloud Storage Spike (Dropbox, 28MB Outbound)",
+            "Personal Cloud Exfiltration (Mega.nz, 45MB Outbound)",
+            "Failed Privilege Handshake (HTTP 403 Spike)",
+        ])
+
+        if st.button("🚀 Push Simulated Log to API"):
+            import random
+            payload = {
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "user_id": "USR-028" if "Exfiltration" in test_type else "USR-061" if "Dropbox" in test_type else "USR-014",
+                "source_ip": "10.4.12.28",
+                "destination_ip": "203.0.113.14" if "Exfiltration" in test_type else "198.51.100.18" if "Dropbox" in test_type else "142.250.190.46",
+                "hostname": "mega.nz" if "Exfiltration" in test_type else "content.dropboxapi.com" if "Dropbox" in test_type else "docs.google.com",
+                "method": "POST" if "Exfiltration" in test_type or "Dropbox" in test_type else "GET",
+                "status_code": 403 if "403" in test_type else 200,
+                "bytes_sent": 47185920 if "Exfiltration" in test_type else 29360128 if "Dropbox" in test_type else 12288,
+                "bytes_received": 14336,
+                "protocol": "TCP",
+                "application": "Personal Cloud Storage",
+                "category": "Exfiltration Test",
+            }
+            res = api_post("/data/stream-log", json_data=payload)
+            if "error" not in res:
+                st.success(f"Log {res.get('log_id')} ingested! Risk: {res.get('threat_score')} ({res.get('risk_level')})")
+                st.rerun()
+            else:
+                st.error(f"Failed: {res.get('error')}")
+
+    with col_n8n_guide:
+        st.subheader("📋 n8n Ingestion Configuration")
+        st.markdown(f"""
+        - **Target Endpoint**: `http://localhost:8000/data/stream-log`
+        - **HTTP Method**: `POST`
+        - **Content-Type**: `application/json`
+        - **Auth**: None required for demo (or use Bearer token from `/auth/token`)
+        - **Interval**: 2.0 seconds (configured via n8n `Wait` node)
+        """)
+        st.code(f"""# Run in shell to test injection:
+curl -X POST "{API_BASE}/data/stream-log" \\
+  -H "Content-Type: application/json" \\
+  -d '{{"user_id": "USR-028", "hostname": "drive.google.com", "bytes_sent": 28000000, "method": "POST"}}'
+        """, language="bash")
+
+    if auto_refresh:
+        time.sleep(2)
+        st.rerun()

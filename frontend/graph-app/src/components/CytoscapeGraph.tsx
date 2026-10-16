@@ -81,6 +81,56 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
       }),
     ];
 
+    // Check if we can perform a smooth in-place data update (prevents canvas blanking during replay)
+    if (cyRef.current && !cyRef.current.isDestroyed()) {
+      const cy = cyRef.current;
+      const currentNodes = cy.nodes();
+      const newNodes = elements.nodes || [];
+
+      if (currentNodes.length > 0 && currentNodes.length === newNodes.length) {
+        let allPresent = true;
+        for (const n of newNodes) {
+          const nid = String(n.data?.id ?? n.id);
+          if (cy.getElementById(nid).length === 0) {
+            allPresent = false;
+            break;
+          }
+        }
+
+        if (allPresent) {
+          cy.batch(() => {
+            for (const n of cyElements) {
+              if (n.group === 'nodes') {
+                const el = cy.getElementById(n.data.id);
+                if (el.length > 0) {
+                  el.data(n.data);
+                  if (n.data.opacity !== undefined) {
+                    el.style('opacity', n.data.opacity);
+                  }
+                  if (n.data.size !== undefined) {
+                    el.style('width', n.data.size);
+                    el.style('height', n.data.size);
+                  }
+                }
+              } else if (n.group === 'edges') {
+                const el = cy.getElementById(n.data.id);
+                if (el.length > 0) {
+                  el.data(n.data);
+                  if (n.data.opacity !== undefined) {
+                    el.style('opacity', n.data.opacity);
+                  }
+                  if (n.data.width !== undefined) {
+                    el.style('width', n.data.width);
+                  }
+                }
+              }
+            }
+          });
+          return;
+        }
+      }
+    }
+
     if (cyRef.current) {
       cyRef.current.destroy();
     }
@@ -235,50 +285,72 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
       ],
       layout: {
         name: layoutName,
-        animate: true,
-        animationDuration: 350,
-        padding: 60,
+        animate: false,
+        padding: 50,
         ...(layoutName === 'cose'
           ? {
-              idealEdgeLength: 140,
-              nodeOverlap: 30,
-              nodeRepulsion: 600000,
-              gravity: 60,
-              numIter: 1000,
+              idealEdgeLength: 120,
+              nodeOverlap: 20,
+              nodeRepulsion: 80000,
+              gravity: 80,
+              numIter: 500,
+              initialTemp: 100,
+              coolingFactor: 0.95,
+              minTemp: 1.0,
+              randomize: false,
             }
           : {}),
       },
     });
 
-    // Ensure layout fit and resize run cleanly
-    cy.on('layoutstop', () => {
-      cy.resize();
-      cy.fit(undefined, 60);
-      cy.center();
-    });
-
-    cy.ready(() => {
-      cy.resize();
-      cy.fit(undefined, 60);
-      cy.center();
-    });
-
-    const timer = setTimeout(() => {
-      if (!cy.isDestroyed()) {
-        cy.resize();
-        cy.fit(undefined, 60);
-        cy.center();
+    // Ensure layout fit and resize run cleanly once without repetitive refits
+    let initialFitted = false;
+    const performInitialFit = () => {
+      if (!initialFitted && cyRef.current && !cyRef.current.isDestroyed()) {
+        initialFitted = true;
+        cyRef.current.resize();
+        cyRef.current.fit(undefined, 50);
+        cyRef.current.center();
       }
-    }, 250);
+    };
+
+    cy.ready(performInitialFit);
+    cy.on('layoutstop', performInitialFit);
 
     const handleWindowResize = () => {
       if (cyRef.current && !cyRef.current.isDestroyed()) {
         cyRef.current.resize();
-        cyRef.current.fit(undefined, 60);
+        cyRef.current.fit(undefined, 50);
         cyRef.current.center();
       }
     };
     window.addEventListener('resize', handleWindowResize);
+
+    // ResizeObserver watches container visibility with hysteresis threshold to prevent infinite subpixel feedback loops
+    let lastWidth = containerRef.current?.clientWidth || 0;
+    let lastHeight = containerRef.current?.clientHeight || 0;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (
+          width > 50 &&
+          height > 50 &&
+          (Math.abs(width - lastWidth) > 8 || Math.abs(height - lastHeight) > 8)
+        ) {
+          lastWidth = width;
+          lastHeight = height;
+          if (cyRef.current && !cyRef.current.isDestroyed()) {
+            cyRef.current.resize();
+            cyRef.current.fit(undefined, 50);
+          }
+        }
+      }
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     // Tap on node
     cy.on('tap', 'node', (evt: EventObject) => {
@@ -310,8 +382,8 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
     cyRef.current = cy;
 
     return () => {
-      clearTimeout(timer);
       window.removeEventListener('resize', handleWindowResize);
+      resizeObserver.disconnect();
       cy.destroy();
       cyRef.current = null;
     };

@@ -66,9 +66,10 @@ paths:
 genai:
   ollama_url: "http://127.0.0.1:11434"
   model: "qwen3:4b"
+  models_dir: "D:/ollama_models"
   alt_models: ["qwen3:8b", "phi4-mini"]
-  timeout_s: 60
-  max_tokens: 450
+  timeout_s: 120
+  max_tokens: 300
   temperature: 0.2
   local_only: true
 

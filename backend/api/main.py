@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Include routers
-from .routers import auth, ingest, detect, genai, score, sim, graph
+from .routers import auth, ingest, detect, genai, score, sim, graph, reports
 app.include_router(auth.router, prefix="/auth")
 app.include_router(ingest.router, prefix="/data")
 app.include_router(detect.router, prefix="/detect")
@@ -29,6 +29,7 @@ app.include_router(score.router, prefix="/score")
 app.include_router(sim.router, prefix="/sim")
 app.include_router(graph.router, prefix="/graph")
 app.include_router(genai.router, prefix="/genai")
+app.include_router(reports.router, prefix="/reports")
 
 @app.get("/health")
 async def health_check():

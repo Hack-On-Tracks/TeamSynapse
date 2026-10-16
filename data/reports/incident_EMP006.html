@@ -1,0 +1,73 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #070b14; color: #f8fafc; margin: 0; padding: 24px; }
+        .card { max-width: 680px; margin: 0 auto; background-color: #0c1426; border: 1px solid #1a2744; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { padding: 24px; background: linear-gradient(180deg, #f43f5e22 0%, #0c1426 100%); border-bottom: 1px solid #1a2744; }
+        .brand { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #f43f5e; margin-bottom: 6px; }
+        .title { font-size: 20px; font-weight: 800; color: #ffffff; margin: 0 0 8px 0; }
+        .meta { font-size: 12px; color: #94a3b8; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #fda4af; margin-top: 8px; }
+        .content { padding: 24px; }
+        .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #142036; padding-bottom: 6px; }
+        .grid { display: table; width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        .grid-row { display: table-row; }
+        .grid-cell { display: table-cell; padding: 10px 12px; border: 1px solid #16243d; font-size: 12px; vertical-align: top; }
+        .cell-label { color: #7b8fa7; font-weight: 600; width: 35%; background: #09101e; }
+        .cell-val { color: #f1f5f9; }
+        .rationale-box { background-color: #060a14; border: 1px solid #17243c; border-radius: 8px; padding: 14px; font-size: 12px; line-height: 1.6; color: #cbd5e1; font-family: monospace; }
+        .footer { padding: 18px 24px; background-color: #080d1a; border-top: 1px solid #142036; font-size: 11px; color: #64748b; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <div class="brand">🛡️ CipherSentinel Autonomous SOC Operations</div>
+          <h1 class="title">CONFIRMED THREAT INCIDENT BRIEF</h1>
+          <div class="meta">Target Entity: <strong style="color:#ffffff;">EMP006</strong> · Dispatched: 2026-10-15 22:14:00 UTC</div>
+          <span class="badge">Risk Score: 88.7 / 100</span>
+        </div>
+        
+        <div class="content">
+          <div class="section-title">Multi-Engine Verification Telemetry</div>
+          <div class="grid">
+            <div class="grid-row">
+              <div class="grid-cell cell-label">1. Rule Engine</div>
+              <div class="grid-cell cell-val"><strong>Score: 83.75</strong> — Volumetric egress & off-hours authentication spike</div>
+            </div>
+            <div class="grid-row">
+              <div class="grid-cell cell-label">2. Scratch ML Model</div>
+              <div class="grid-cell cell-val"><strong>Score: 53.4%</strong> (Isolation Forest 32-dim Status: <span style="color:#38bdf8;">ANOMALOUS (Isolation Forest Contamination < 0.01)</span>)</div>
+            </div>
+            <div class="grid-row">
+              <div class="grid-cell cell-label">3. Ollama Qwen3:4b (D:\)</div>
+              <div class="grid-cell cell-val"><strong>Verdict: CONFIRMED_THREAT</strong> (95% confidence)</div>
+            </div>
+            <div class="grid-row">
+              <div class="grid-cell cell-label">Multi-Engine Status</div>
+              <div class="grid-cell cell-val" style="color:#10b981; font-weight:700;">✓ 3 / 3 Concordant Consensus</div>
+            </div>
+          </div>
+
+          <div class="section-title">Ollama Deep Reasoning & Chain-of-Thought Rationale</div>
+          <div class="rationale-box">
+            Corroborated by all 3 layers: Rule Engine (CRITICAL), Scratch ML Model (OUTLIER), and Ollama Qwen3:4b (96.0% Confirmed). Target: Confirmed malicious insider threat: 3 consecutive failed Kerberos authentications followed by 550MB transfer to unseen foreign IP at 02:30 AM. Compromised / targeted asset: Confidential Q3 Earnings & Board Meeting Minutes.
+          </div>
+
+          
+          <div class="section-title">Analyst Custom Notes</div>
+          <div style="font-size:12px; color:#94a3b8; font-style:italic; padding: 8px 0;">Automated incident brief triggered by n8n SOC Workflow</div>
+          
+        </div>
+
+        <div class="footer">
+          CipherSentinel Zero-Trust Threat Intelligence Platform · Confidential Security Audit
+          <br>Recipient: sanskar0912gharal@gmail.com · Mode: NodeMailer High-Priority Telemetry
+        </div>
+      </div>
+    </body>
+    </html>
+    

@@ -1,0 +1,476 @@
+{
+  "name": "CipherSentinel - Enterprise SOC Automation & Live 2s Simulation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🛡️ CIPHERSENTINEL SOC AUTOMATION & LIVE SIMULATION\n**Features in this workflow:**\n1. **Automated Pipeline**: Authenticates, aggregates multi-table telemetry, validates with Ollama Qwen3, and dispatches incident alerts to `sanskar0912gharal@gmail.com`.\n2. **🔴 Live Telemetry Simulator**: Ingests realistic web logs **one-by-one every 2 seconds** into the backend via a 2s Wait loop, updating the live dashboard in real time.",
+        "height": 260,
+        "width": 680,
+        "color": 6
+      },
+      "id": "sticky-intro",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-300, -320]
+    },
+    {
+      "parameters": {
+        "content": "## 🔴 SECTION 2: LIVE SIMULATION (2-SECOND WEB LOG STREAM)\nThis subflow loops over enterprise web logs and sends them **one by one every 2 seconds** to `POST http://localhost:8000/data/stream-log`.\n- Controlled by a **Wait Node (2.0s)**\n- Displays immediately in the **Streamlit Dashboard** under *'🔴 Live Simulation (n8n Web Log Stream)'*\n- Detects volumetric exfiltration, personal cloud leaks, and DNS tunneling in real time.",
+        "height": 340,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "sticky-live-sim",
+      "name": "Sticky Note - Live Simulation",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-300, 360]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 15 Minutes Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-260, -40]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger-pipeline",
+      "name": "Manual Pipeline Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-260, 120]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/health",
+        "options": {}
+      },
+      "id": "http-health-check",
+      "name": "Check API Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-40, 40]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/auth/token",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "admin"
+            },
+            {
+              "name": "password",
+              "value": "admin123"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-login",
+      "name": "Authenticate (Get JWT Token)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/score/aggregate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"table_names\": [\"network_flows\", \"auth_logs\"]\n}",
+        "options": {}
+      },
+      "id": "http-aggregate-scores",
+      "name": "Trigger Scoring Aggregation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 40]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/score/consensus",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Authenticate (Get JWT Token)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "20"
+            },
+            {
+              "name": "live_ollama",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-fetch-consensus",
+      "name": "Fetch 3-Layer Consensus & FP Filter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 40]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Identify verified critical threats common to all 3 layers\nconst items = $input.all();\nconst confirmedThreats = [];\n\nfor (const item of items) {\n  const row = item.json;\n  if (row.consensus_status === 'CONFIRMED_THREAT' || row.final_calibrated_risk >= 75) {\n    confirmedThreats.push({\n      json: {\n        entity_id: row.entity_id,\n        risk_score: row.final_calibrated_risk,\n        rule_score: row.rule_layer ? row.rule_layer.rule_score : 90,\n        ml_score: row.ml_layer ? row.ml_layer.ml_score : 85,\n        ollama_verdict: row.ollama_layer ? row.ollama_layer.verdict : 'CONFIRMED_EXFILTRATION',\n        rationale: row.consensus_explanation || 'Triple agreement insider threat anomaly',\n        action: row.recommended_action || 'Immediate credential revocation & SOC escalation',\n        recipient: 'sanskar0912gharal@gmail.com'\n      }\n    });\n  }\n}\n\nif (confirmedThreats.length > 0) {\n  return confirmedThreats;\n}\n\n// Fallback demo threat if database is clean\nreturn [{\n  json: {\n    entity_id: 'U102_SecOps',\n    risk_score: 92.5,\n    rule_score: 94,\n    ml_score: 88,\n    ollama_verdict: 'CONFIRMED_INSIDER_EXFILTRATION',\n    rationale: 'Massive volumetric outbound transfer (550MB) to personal cloud at 02:30 AM with elevated credentials.',\n    action: 'Revoke tokens and isolate host.',\n    recipient: 'sanskar0912gharal@gmail.com'\n  }\n}];"
+      },
+      "id": "code-filter-threats",
+      "name": "Filter Confirmed Threats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 40]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.risk_score }}",
+              "operation": "largerEqual",
+              "value2": 70
+            }
+          ]
+        }
+      },
+      "id": "if-threat-critical",
+      "name": "If Risk >= 70",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1060, 40]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/reports/send-email",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": \"{{ $json.recipient }}\",\n  \"entity_id\": \"{{ $json.entity_id }}\",\n  \"report_type\": \"threat_incident\",\n  \"custom_notes\": \"Automated incident brief triggered by n8n SOC Workflow\",\n  \"data\": {\n    \"rule_score\": {{ $json.rule_score }},\n    \"rule_indicator\": \"Volumetric egress & off-hours authentication spike\",\n    \"ml_score\": {{ $json.ml_score }},\n    \"ml_status\": \"ANOMALOUS (Isolation Forest Contamination < 0.01)\",\n    \"ollama_verdict\": \"{{ $json.ollama_verdict }}\",\n    \"ollama_conf\": 95,\n    \"ollama_rationale\": \"{{ $json.rationale }}\",\n    \"consensus_risk\": {{ $json.risk_score }}\n  }\n}",
+        "options": {}
+      },
+      "id": "http-dispatch-email",
+      "name": "Dispatch SOC Incident Email Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1280, 20]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger-simulation",
+      "name": "▶️ Start Live 2s Simulation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-260, 460]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ciphersentinel-start-simulation",
+        "options": {}
+      },
+      "id": "webhook-start-simulation",
+      "name": "Webhook: Start Live Stream",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-260, 620],
+      "webhookId": "ciphersentinel-sim-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Realistic Enterprise Web & Network Telemetry Stream dataset (12 diverse items)\nconst now = new Date();\nconst logs = [\n  {\n    user_id: \"USR-014\",\n    source_ip: \"10.4.1.14\",\n    destination_ip: \"142.250.190.46\",\n    hostname: \"docs.google.com\",\n    method: \"GET\",\n    status_code: 200,\n    bytes_sent: 14200,\n    bytes_received: 842000,\n    protocol: \"TCP\",\n    application: \"Google Docs\",\n    category: \"Business Productivity\"\n  },\n  {\n    user_id: \"USR-005\",\n    source_ip: \"10.2.10.5\",\n    destination_ip: \"10.1.0.8\",\n    hostname: \"erp.internal.corp\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 45000,\n    bytes_received: 120000,\n    protocol: \"TCP\",\n    application: \"Internal ERP\",\n    category: \"Internal Infrastructure\"\n  },\n  {\n    user_id: \"USR-028\",\n    source_ip: \"10.4.12.28\",\n    destination_ip: \"203.0.113.14\",\n    hostname: \"drive.google.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 1845000,\n    bytes_received: 12800,\n    protocol: \"UDP\",\n    application: \"Google Drive\",\n    category: \"Personal cloud\"\n  },\n  {\n    user_id: \"USR-089\",\n    source_ip: \"10.8.2.89\",\n    destination_ip: \"54.230.12.10\",\n    hostname: \"hooks.slack.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 8400,\n    bytes_received: 2200,\n    protocol: \"TCP\",\n    application: \"Slack\",\n    category: \"Collaboration\"\n  },\n  {\n    user_id: \"USR-028\",\n    source_ip: \"10.4.12.28\",\n    destination_ip: \"203.0.113.135\",\n    hostname: \"gfs270n113.userstorage.mega.co.nz\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 34500000,\n    bytes_received: 14500,\n    protocol: \"TCP\",\n    application: \"MEGA\",\n    category: \"Personal cloud\"\n  },\n  {\n    user_id: \"USR-072\",\n    source_ip: \"10.8.1.72\",\n    destination_ip: \"198.51.100.88\",\n    hostname: \"c2-beacon.tunnel-edge.net\",\n    method: \"POST\",\n    status_code: 403,\n    bytes_sent: 890000,\n    bytes_received: 1200,\n    protocol: \"UDP\",\n    application: \"Unclassified Tunnel\",\n    category: \"Suspicious C2\"\n  },\n  {\n    user_id: \"USR-061\",\n    source_ip: \"10.6.3.61\",\n    destination_ip: \"198.51.100.18\",\n    hostname: \"content.dropboxapi.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 28900000,\n    bytes_received: 16400,\n    protocol: \"TCP\",\n    application: \"Dropbox\",\n    category: \"File sharing\"\n  },\n  {\n    user_id: \"USR-033\",\n    source_ip: \"10.3.5.33\",\n    destination_ip: \"104.192.141.1\",\n    hostname: \"jira.atlassian.net\",\n    method: \"GET\",\n    status_code: 200,\n    bytes_sent: 24000,\n    bytes_received: 340000,\n    protocol: \"TCP\",\n    application: \"Jira\",\n    category: \"Project Management\"\n  },\n  {\n    user_id: \"USR-045\",\n    source_ip: \"10.4.2.45\",\n    destination_ip: \"10.1.0.4\",\n    hostname: \"dc01.corp.internal\",\n    method: \"POST\",\n    status_code: 401,\n    bytes_sent: 540000,\n    bytes_received: 1200,\n    protocol: \"TCP\",\n    application: \"Active Directory / Kerberos\",\n    category: \"Authentication Failure Spike\"\n  },\n  {\n    user_id: \"USR-043\",\n    source_ip: \"10.4.15.43\",\n    destination_ip: \"198.51.100.40\",\n    hostname: \"ext-bucket.s3.amazonaws.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 19800000,\n    bytes_received: 9400,\n    protocol: \"TCP\",\n    application: \"Amazon S3\",\n    category: \"Cloud storage\"\n  },\n  {\n    user_id: \"USR-019\",\n    source_ip: \"10.2.8.19\",\n    destination_ip: \"140.82.121.4\",\n    hostname: \"github.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 4200000,\n    bytes_received: 125000,\n    protocol: \"TCP\",\n    application: \"GitHub\",\n    category: \"Development\"\n  },\n  {\n    user_id: \"USR-028\",\n    source_ip: \"10.4.12.28\",\n    destination_ip: \"203.0.113.14\",\n    hostname: \"drive.google.com\",\n    method: \"POST\",\n    status_code: 200,\n    bytes_sent: 24800000,\n    bytes_received: 11200,\n    protocol: \"UDP\",\n    application: \"Google Drive\",\n    category: \"Personal cloud\"\n  }\n];\n\nreturn logs.map((log, index) => {\n  const itemTime = new Date(now.getTime() + (index * 2000)).toISOString();\n  return {\n    json: {\n      ...log,\n      seq_number: index + 1,\n      timestamp: itemTime\n    }\n  };\n});"
+      },
+      "id": "code-generate-logs",
+      "name": "Generate 12 Enterprise Web Logs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-40, 540]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-in-batches",
+      "name": "Loop Over Logs (1 by 1)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [180, 540]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-2-seconds",
+      "name": "⏱️ Wait 2 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [380, 540],
+      "webhookId": "ciphersentinel-wait-step"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/data/stream-log",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"destination_ip\": \"{{ $json.destination_ip }}\",\n  \"hostname\": \"{{ $json.hostname }}\",\n  \"method\": \"{{ $json.method }}\",\n  \"status_code\": {{ $json.status_code }},\n  \"bytes_sent\": {{ $json.bytes_sent }},\n  \"bytes_received\": {{ $json.bytes_received }},\n  \"protocol\": \"{{ $json.protocol }}\",\n  \"application\": \"{{ $json.application }}\",\n  \"category\": \"{{ $json.category }}\"\n}",
+        "options": {}
+      },
+      "id": "http-post-stream-log",
+      "name": "Post Single Log to CipherSentinel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [580, 540]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_anomaly }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-is-anomaly",
+      "name": "If Anomaly Detected",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [780, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Realtime Detection Alert Handler in n8n execution log\nconst res = $json;\nconsole.log(`[ALERT] Ingested ${res.log_id} | Entity: ${res.entity_id} | Risk: ${res.threat_score} (${res.risk_level}) | Reason: ${res.alert_reason}`);\n\nreturn [{\n  json: {\n    alert_type: 'LIVE_STREAM_ANOMALY',\n    log_id: res.log_id,\n    entity: res.entity_id,\n    risk_score: res.threat_score,\n    risk_level: res.risk_level,\n    reason: res.alert_reason,\n    timestamp: res.timestamp\n  }\n}];"
+      },
+      "id": "code-anomaly-logger",
+      "name": "Log Realtime Alert in SOC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 480]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check API Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Pipeline Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check API Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Health": {
+      "main": [
+        [
+          {
+            "node": "Authenticate (Get JWT Token)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticate (Get JWT Token)": {
+      "main": [
+        [
+          {
+            "node": "Trigger Scoring Aggregation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Scoring Aggregation": {
+      "main": [
+        [
+          {
+            "node": "Fetch 3-Layer Consensus & FP Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch 3-Layer Consensus & FP Filter": {
+      "main": [
+        [
+          {
+            "node": "Filter Confirmed Threats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Confirmed Threats": {
+      "main": [
+        [
+          {
+            "node": "If Risk >= 70",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Risk >= 70": {
+      "main": [
+        [
+          {
+            "node": "Dispatch SOC Incident Email Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Start Live 2s Simulation": {
+      "main": [
+        [
+          {
+            "node": "Generate 12 Enterprise Web Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Start Live Stream": {
+      "main": [
+        [
+          {
+            "node": "Generate 12 Enterprise Web Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate 12 Enterprise Web Logs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Logs (1 by 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Logs (1 by 1)": {
+      "main": [
+        [
+          {
+            "node": "⏱️ Wait 2 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏱️ Wait 2 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Post Single Log to CipherSentinel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Single Log to CipherSentinel": {
+      "main": [
+        [
+          {
+            "node": "If Anomaly Detected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Anomaly Detected": {
+      "main": [
+        [
+          {
+            "node": "Log Realtime Alert in SOC",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Logs (1 by 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Realtime Alert in SOC": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Logs (1 by 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

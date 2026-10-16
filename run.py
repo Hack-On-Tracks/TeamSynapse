@@ -49,9 +49,24 @@ def main():
     # Set environment variables
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT_DIR)
+    env["OLLAMA_MODELS"] = r"D:\ollama_models"
+
+    # 0. Ensure Ollama Service is running for LLM Verification Engine
+    print("\n[0/3] Checking Ollama LLM Service (D:\\ollama_models) ...")
+    ollama_proc = None
+    try:
+        from backend.genai.ollama_client import OllamaClient
+        client = OllamaClient(models_dir=r"D:\ollama_models")
+        if client.ensure_service_running(timeout_s=5):
+            stat = client.status()
+            print(f"  -> Ollama is live on {client.base_url} (Model: {client.model}, Storage: {stat.get('models_dir')})")
+        else:
+            print("  -> Notice: Ollama service not started; Tier-3 verification will use ground-truth fallback.")
+    except Exception as e:
+        print(f"  -> Notice: Ollama initialization deferred ({e})")
 
     # 1. Start FastAPI Backend Server
-    print("\n[1/2] Starting FastAPI Backend on http://127.0.0.1:8000 ...")
+    print("\n[1/3] Starting FastAPI Backend on http://127.0.0.1:8000 ...")
     backend_proc = subprocess.Popen(
         [
             PYTHON_EXE,
@@ -109,6 +124,7 @@ def main():
 
     print("\n" + "=" * 65)
     print("🚀 CIPHERSENTINEL IS LIVE!")
+    print("   • LLM Engine:      http://127.0.0.1:11434 (Qwen3:4b @ D:\\ollama_models)")
     print("   • Graph Simulator: http://localhost:5173")
     print("   • SOC Dashboard:   http://localhost:8501")
     print("   • REST API:        http://127.0.0.1:8000")

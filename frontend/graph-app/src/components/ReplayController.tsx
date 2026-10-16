@@ -7,11 +7,14 @@ interface ReplayControllerProps {
   isPlaying: boolean;
   speed: number;
   currentTimestamp: string;
-  onPlayToggle: () => void;
+  onPlayToggle?: () => void;
+  onPlay?: () => void;
+  onPause?: () => void;
   onReset: () => void;
   onStepForward: () => void;
   onStepBackward: () => void;
-  onSeek: (frame: number) => void;
+  onSeek?: (frame: number) => void;
+  onFrameSeek?: (frame: number) => void;
   onSpeedChange: (speed: number) => void;
   scenarios: string[];
   selectedScenario: string;
@@ -25,15 +28,32 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   speed,
   currentTimestamp,
   onPlayToggle,
+  onPlay,
+  onPause,
   onReset,
   onStepForward,
   onStepBackward,
   onSeek,
+  onFrameSeek,
   onSpeedChange,
   scenarios,
   selectedScenario,
   onScenarioChange,
 }) => {
+  const handleTogglePlay = () => {
+    if (onPlayToggle) {
+      onPlayToggle();
+    } else if (isPlaying && onPause) {
+      onPause();
+    } else if (!isPlaying && onPlay) {
+      onPlay();
+    }
+  };
+
+  const handleSeek = (frame: number) => {
+    if (onSeek) onSeek(frame);
+    if (onFrameSeek) onFrameSeek(frame);
+  };
   return (
     <div
       style={{
@@ -63,8 +83,8 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
           <SkipBack size={15} />
         </button>
         <button
-          onClick={onPlayToggle}
-          title={isPlaying ? 'Pause Replay' : 'Play Replay'}
+          onClick={handleTogglePlay}
+          title={isPlaying ? 'Pause' : 'Play'}
           style={{
             background: isPlaying ? 'var(--accent-amber)' : 'var(--accent-cyan)',
             color: '#070d1e',
@@ -78,7 +98,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
           }}
         >
           {isPlaying ? <Pause size={15} /> : <Play size={15} />}
-          {isPlaying ? 'PAUSE' : 'REPLAY'}
+          {isPlaying ? 'PAUSE' : 'PLAY'}
         </button>
         <button
           onClick={onStepForward}
@@ -109,7 +129,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Clock size={12} style={{ color: 'var(--accent-cyan)' }} />
-            Simulation Frame: {currentFrame + 1} / {Math.max(1, totalFrames)}
+            Simulation Frame: {currentFrame} / {Math.max(1, totalFrames)}
           </span>
           <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>
             {currentTimestamp || 'Historical Window'}
@@ -117,10 +137,10 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         </div>
         <input
           type="range"
-          min="0"
-          max={Math.max(0, totalFrames - 1)}
+          min="1"
+          max={Math.max(1, totalFrames)}
           value={currentFrame}
-          onChange={(e) => onSeek(parseInt(e.target.value, 10))}
+          onChange={(e) => handleSeek(parseInt(e.target.value, 10))}
           style={{
             width: '100%',
             cursor: 'pointer',

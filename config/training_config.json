@@ -1,0 +1,51 @@
+{
+  "feature_columns_ordered": [
+    "bytes_out",
+    "bytes_in",
+    "bytes_total",
+    "packets_out",
+    "packets_in",
+    "flow_count",
+    "log_bytes_out",
+    "log_bytes_in",
+    "log_bytes_total",
+    "upload_download_ratio",
+    "fraction_bytes_out",
+    "bytes_out_per_flow",
+    "packets_out_per_flow",
+    "avg_packet_size_out",
+    "avg_packet_size_in",
+    "unique_destinations",
+    "new_destinations",
+    "new_destination_fraction",
+    "is_weekend",
+    "after_hours_flow_fraction",
+    "after_hours_flow_count",
+    "rolling_7d_bytes_out",
+    "rolling_7d_flow_count",
+    "rolling_upload_delta_7d",
+    "user_dev_bytes_out",
+    "user_dev_flow_count",
+    "user_dev_ratio",
+    "user_baseline_available",
+    "peer_dev_bytes_out",
+    "peer_dev_ratio",
+    "peer_dev_after_hours",
+    "peer_dev_destinations"
+  ],
+  "hyperparameters_recommended": {
+    "n_estimators": 300,
+    "max_samples": 256,
+    "contamination": 0.02,
+    "random_state": 42
+  },
+  "hardware_notes": {
+    "intended_n_jobs": -1
+  },
+  "data_paths": {
+    "train_features": "data/processed/train_features.parquet",
+    "validation_features": "data/processed/validation_features.parquet",
+    "test_features": "data/processed/test_features.parquet",
+    "ground_truth_incidents": "data/ground_truth/incident_labels.parquet"
+  }
+}

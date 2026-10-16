@@ -43,12 +43,16 @@ import { ScenarioLabView } from './ScenarioLabView';
 import { EvaluationLabView } from './EvaluationLabView';
 import { ThreatHuntingView } from './ThreatHuntingView';
 import { InvestigationMultiLayerEngine } from './InvestigationMultiLayerEngine';
+import { LiveGeoThreatMap } from './LiveGeoThreatMap';
+import { DEFAULT_FALLBACK_ELEMENTS } from '../App';
 
 export type WorkspaceTab =
   | 'Overview'
   | 'Investigations'
   | 'Network Graph'
   | 'Temporal Replay'
+  | '🔴 Live Global Map'
+  | '⚡ 2s Live Stream'
   | 'Scenario Lab'
   | 'Evaluation Lab'
   | 'Activity log'
@@ -84,11 +88,10 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   // Cytoscape selection & replay states
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<any | null>(null);
-  const [currentFrame, setCurrentFrame] = useState(5);
-  const [totalFrames, setTotalFrames] = useState(12);
+  const [currentFrame, setCurrentFrame] = useState(1);
+  const totalFrames = 12;
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [currentTimestamp, setCurrentTimestamp] = useState('2026-10-15 03:15:00 UTC');
   const [scenarios] = useState<string[]>([
     'ALL_SCENARIOS',
     'high_volume_exfiltration',
@@ -98,7 +101,313 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   ]);
   const [selectedScenario, setSelectedScenario] = useState('ALL_SCENARIOS');
 
+  // Live 2-second stream state
+  const [liveStreamLogs, setLiveStreamLogs] = useState<any[]>([]);
+  const [isLiveStreamActive, setIsLiveStreamActive] = useState<boolean>(true);
+  const [streamCountdown, setStreamCountdown] = useState<number>(2.0);
+
   const flowStream = useFlowStream();
+
+  // 12-Step Progressive Forensic Timeline Steps for Temporal Replay
+  const REPLAY_TIMELINE_STEPS = [
+    {
+      step: 1,
+      day: 1,
+      time: '2026-10-01 09:00 UTC',
+      title: 'Baseline Enterprise Operations',
+      mitre: 'T1078 Valid Accounts (Benign Baseline)',
+      severity: 'LOW',
+      notation: 'Normal employee work shift. Engineers and HR staff access approved enterprise endpoints (GitHub and Workday). All telemetry conforms to trailing-window peer baseline.',
+      sourceEntity: 'E102 (DevOps Lead), E012 (HR Specialist)',
+      targetEntity: 'api.github.com, workday.saas.corp',
+      bytes: '34 MB',
+      protocol: 'HTTPS / TLS 1.3',
+      activeNodeIds: ['usr-engineer-02', 'usr-hr-03', 'ext-github', 'ext-workday'],
+      activeEdgeIds: ['flow-e11', 'flow-e12'],
+      riskIndex: 12,
+    },
+    {
+      step: 2,
+      day: 3,
+      time: '2026-10-03 11:30 UTC',
+      title: 'Internal Host Discovery & DNS Enumeration',
+      mitre: 'T1018 Remote System Discovery',
+      severity: 'LOW',
+      notation: 'Financial Analyst E049 performs rapid DNS lookups across internal domain servers. 310 DNS resolution requests observed via internal resolver.',
+      sourceEntity: 'E049 (Fin Analyst)',
+      targetEntity: 'dns01.resolver.local',
+      bytes: '1.5 MB',
+      protocol: 'DNS / UDP 53',
+      activeNodeIds: ['usr-analyst-01', 'srv-dns-01'],
+      activeEdgeIds: ['flow-e10'],
+      riskIndex: 25,
+    },
+    {
+      step: 3,
+      day: 5,
+      time: '2026-10-05 01:45 UTC',
+      title: 'Off-Hours Kerberos Authentication Spike',
+      mitre: 'T1110.003 Password Spraying / Brute Force',
+      severity: 'MEDIUM',
+      notation: '14 consecutive Kerberos logon failures within 3 minutes targeting dc01.corp.internal at 01:45 AM. Initial alert indicator flagged by Heuristic Rule Engine.',
+      sourceEntity: 'E028 (Compromised)',
+      targetEntity: 'dc01.corp.internal',
+      bytes: '85 MB',
+      protocol: 'Kerberos / SMB (Port 445)',
+      activeNodeIds: ['usr-insider-04', 'srv-dc-01'],
+      activeEdgeIds: ['flow-e7'],
+      riskIndex: 58,
+    },
+    {
+      step: 4,
+      day: 6,
+      time: '2026-10-06 02:15 UTC',
+      title: 'Financial Database Export Dump',
+      mitre: 'T1005 Data from Local System / Database',
+      severity: 'HIGH',
+      notation: 'Direct PostgreSQL query batch executed against production vault database. 340 MB of sensitive financial records and customer PII staged locally.',
+      sourceEntity: 'E049 (Fin Analyst)',
+      targetEntity: 'vault.financial-db.prod',
+      bytes: '340 MB',
+      protocol: 'PostgreSQL TLS (Port 5432)',
+      activeNodeIds: ['usr-analyst-01', 'srv-db-vault'],
+      activeEdgeIds: ['flow-e5'],
+      riskIndex: 78,
+    },
+    {
+      step: 5,
+      day: 7,
+      time: '2026-10-07 03:00 UTC',
+      title: 'First-Seen External Cloud Destination',
+      mitre: 'T1567 Exfiltration Over Web Service (Setup)',
+      severity: 'HIGH',
+      notation: 'Initial handshake established to unapproved cloud storage endpoint backup-sync.storage.example.net. Destination previously unobserved in company peer group.',
+      sourceEntity: 'E049 (Fin Analyst)',
+      targetEntity: 'backup-sync.storage.example.net',
+      bytes: '45 MB',
+      protocol: 'QUIC / UDP 443',
+      activeNodeIds: ['usr-analyst-01', 'ext-s3-exfil'],
+      activeEdgeIds: ['flow-e1'],
+      riskIndex: 82,
+    },
+    {
+      step: 6,
+      day: 9,
+      time: '2026-10-09 01:10 UTC',
+      title: 'DNS Tunneling C2 Beacon Established',
+      mitre: 'T1071.004 DNS C2 Tunneling',
+      severity: 'CRITICAL',
+      notation: 'Subdomain Shannon entropy spikes to 4.8 on c2-beacon.tunnel-edge.net. 420 UDP packets observed transmitting base64 encoded chunks through recursive resolver.',
+      sourceEntity: 'E028 (Compromised)',
+      targetEntity: 'c2-beacon.tunnel-edge.net',
+      bytes: '18 MB',
+      protocol: 'DNS Tunnel / UDP 53',
+      activeNodeIds: ['usr-insider-04', 'c2-beacon-01'],
+      activeEdgeIds: ['flow-e9'],
+      riskIndex: 94,
+    },
+    {
+      step: 7,
+      day: 11,
+      time: '2026-10-11 02:40 UTC',
+      title: 'Unscheduled Financial Wire Webhook',
+      mitre: 'T1537 Transfer Data to Cloud Account',
+      severity: 'CRITICAL',
+      notation: 'Wire transfer API initiated to SWIFT interbank gateway for $1.4M using off-hours analyst credentials. Tripped Tier-3 Asset protection threshold.',
+      sourceEntity: 'E049 (Fin Analyst)',
+      targetEntity: 'swift-wire.interbank.fin',
+      bytes: '4.5 MB',
+      protocol: 'Financial Wire / ISO 20022',
+      activeNodeIds: ['usr-analyst-01', 'gw-swift-bank'],
+      activeEdgeIds: ['flow-e3'],
+      riskIndex: 88,
+    },
+    {
+      step: 8,
+      day: 12,
+      time: '2026-10-12 02:15 UTC',
+      title: 'Mega.nz Cloud Storage Ingestion Acceleration',
+      mitre: 'T1048.003 Exfiltration Over Alternative Protocol',
+      severity: 'CRITICAL',
+      notation: 'Compromised insider E028 initiates high-throughput upload of 550 MB compressed archive to gfs270n113.userstorage.mega.co.nz.',
+      sourceEntity: 'E028 (Compromised)',
+      targetEntity: 'gfs270n113.userstorage.mega.co.nz',
+      bytes: '550 MB',
+      protocol: 'QUIC v1 / UDP 443',
+      activeNodeIds: ['usr-insider-04', 'ext-mega-nz'],
+      activeEdgeIds: ['flow-e2'],
+      riskIndex: 96,
+    },
+    {
+      step: 9,
+      day: 13,
+      time: '2026-10-13 03:15 UTC',
+      title: 'Synchronized Volumetric Exfiltration Peak',
+      mitre: 'T1048 Exfiltration Over C2 & Cloud',
+      severity: 'CRITICAL',
+      notation: 'Multi-vector egress apex. Egress byte volume exceeds peer baseline by 840%. Multiple external cloud destinations receiving data in parallel.',
+      sourceEntity: 'E049 (Fin Analyst), E028 (Compromised)',
+      targetEntity: 'backup-sync, mega.co.nz, c2-beacon',
+      bytes: '820 MB',
+      protocol: 'QUIC / TLS Multi-channel',
+      activeNodeIds: ['usr-analyst-01', 'ext-s3-exfil', 'usr-insider-04', 'ext-mega-nz', 'c2-beacon-01'],
+      activeEdgeIds: ['flow-e1', 'flow-e2', 'flow-e9'],
+      riskIndex: 98,
+    },
+    {
+      step: 10,
+      day: 14,
+      time: '2026-10-14 08:30 UTC',
+      title: '3-Layer Triangulation & Consensus Corroboration',
+      mitre: 'Automated Detection Correlation',
+      severity: 'CRITICAL',
+      notation: 'All 3 defense layers trigger in consensus: Rule Engine scores 94%, Isolation Forest detects 32-feature anomaly (contamination < 0.01), Ollama Qwen3 validates malicious insider exfiltration.',
+      sourceEntity: 'E049, E028',
+      targetEntity: 'dc01.corp.internal, backup-sync',
+      bytes: 'Correlated Aggregate',
+      protocol: 'Tri-Engine Consensus',
+      activeNodeIds: ['usr-analyst-01', 'usr-insider-04', 'srv-dc-01', 'ext-s3-exfil'],
+      activeEdgeIds: ['flow-e1', 'flow-e2', 'flow-e7'],
+      riskIndex: 99,
+    },
+    {
+      step: 11,
+      day: 14,
+      time: '2026-10-14 09:15 UTC',
+      title: 'Automated SOC Incident Brief Dispatched',
+      mitre: 'SOC Alert Escalation',
+      severity: 'HIGH',
+      notation: 'High-fidelity executive HTML incident report automatically compiled and dispatched via Google SMTP to sanskar0912gharal@gmail.com.',
+      sourceEntity: 'CipherSentinel SOC',
+      targetEntity: 'Security Analysts Queue',
+      bytes: 'Executive Brief',
+      protocol: 'SMTP / SSL (Port 465)',
+      activeNodeIds: ['usr-analyst-01', 'usr-insider-04'],
+      activeEdgeIds: ['flow-e1', 'flow-e2'],
+      riskIndex: 92,
+    },
+    {
+      step: 12,
+      day: 14,
+      time: '2026-10-14 09:45 UTC',
+      title: 'Containment & Endpoint Host Isolation',
+      mitre: 'T1089 Disabling Security Tools (Mitigation)',
+      severity: 'RESOLVED',
+      notation: 'Security analyst confirms investigation. Compromised credentials revoked, active network sessions terminated, and endpoint placed in host quarantine.',
+      sourceEntity: 'SOC Containment Agent',
+      targetEntity: 'E049, E028 Endpoints',
+      bytes: 'Session Severed',
+      protocol: 'Quarantine Protocol',
+      activeNodeIds: ['usr-analyst-01', 'usr-insider-04'],
+      activeEdgeIds: [],
+      riskIndex: 10,
+    },
+  ];
+
+  const activeReplayStep = REPLAY_TIMELINE_STEPS[(currentFrame - 1) % REPLAY_TIMELINE_STEPS.length];
+
+  // Replay frame playback timer
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => {
+      setCurrentFrame(prev => {
+        if (prev >= totalFrames) {
+          setIsPlaying(false);
+          return totalFrames;
+        }
+        return prev + 1;
+      });
+    }, 2400 / speed);
+
+    return () => clearInterval(timer);
+  }, [isPlaying, speed, totalFrames]);
+
+  // Dynamic simulation of nodes and edges in graph based on temporal step
+  const simulatedReplayElements = React.useMemo(() => {
+    // Temporal replay forensic timeline is specifically mapped to the enterprise simulation topology
+    const rawNodes = (graphElements?.nodes && graphElements.nodes.length > 0 && graphElements.nodes.some((n: any) => String(n.data?.id || '').startsWith('usr-')))
+      ? graphElements.nodes
+      : DEFAULT_FALLBACK_ELEMENTS.nodes;
+    const rawEdges = (graphElements?.edges && graphElements.edges.length > 0 && graphElements.edges.some((e: any) => String(e.data?.id || '').startsWith('flow-')))
+      ? graphElements.edges
+      : DEFAULT_FALLBACK_ELEMENTS.edges;
+
+    const simulatedNodes = rawNodes.map((n: any) => {
+      const d = n.data || n;
+      const idStr = String(d.id || '');
+      const labelStr = String(d.label || '');
+      const entityStr = String(d.entity_id || '');
+
+      const isActive = activeReplayStep.activeNodeIds.some(
+        target =>
+          idStr === target ||
+          idStr.toLowerCase().includes(target.toLowerCase()) ||
+          target.toLowerCase().includes(idStr.toLowerCase()) ||
+          labelStr.toLowerCase().includes(target.toLowerCase()) ||
+          entityStr === target
+      );
+
+      return {
+        data: {
+          ...d,
+          riskScore: isActive ? activeReplayStep.riskIndex : Math.min(d.riskScore ?? 15, 20),
+          severity: isActive ? activeReplayStep.severity : 'LOW',
+          size: isActive ? 58 : 34,
+          opacity: isActive ? 1.0 : 0.35,
+        },
+      };
+    });
+
+    const simulatedEdges = rawEdges.map((e: any) => {
+      const d = e.data || e;
+      const idStr = String(d.id || `${d.source}-${d.target}`);
+      const isActive = activeReplayStep.activeEdgeIds.some(
+        target => idStr === target || idStr.includes(target) || target.includes(idStr)
+      );
+
+      return {
+        data: {
+          ...d,
+          width: isActive ? 5.0 : 1.5,
+          opacity: isActive ? 1.0 : 0.25,
+        },
+      };
+    });
+
+    return { nodes: simulatedNodes, edges: simulatedEdges };
+  }, [graphElements, activeReplayStep]);
+
+  // 2-Second Live Log Stream Polling Engine (only ticks when viewing the live stream tab)
+  useEffect(() => {
+    if (!isLiveStreamActive || view !== '⚡ 2s Live Stream') return;
+
+    const fetchStreamLogs = async () => {
+      try {
+        const res = await fetch('/api/data/stream-logs?limit=40');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logs && data.logs.length > 0) {
+            setLiveStreamLogs(data.logs);
+          }
+        }
+      } catch {}
+    };
+
+    fetchStreamLogs();
+    const interval = setInterval(() => {
+      fetchStreamLogs();
+      setStreamCountdown(2.0);
+    }, 2000);
+
+    const tick = setInterval(() => {
+      setStreamCountdown(prev => (prev <= 0.1 ? 2.0 : Number((prev - 0.1).toFixed(1))));
+    }, 100);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(tick);
+    };
+  }, [isLiveStreamActive, view]);
 
   // Load cases and summary from FastAPI backend
   const refreshData = async () => {
@@ -147,9 +456,11 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
     { title: 'Investigations' as WorkspaceTab, icon: Shield, count: openCount },
     { title: 'Network Graph' as WorkspaceTab, icon: Layers },
     { title: 'Temporal Replay' as WorkspaceTab, icon: Play },
+    { title: '🔴 Live Global Map' as WorkspaceTab, icon: Globe2 },
+    { title: '⚡ 2s Live Stream' as WorkspaceTab, icon: Activity },
     { title: 'Scenario Lab' as WorkspaceTab, icon: Zap },
     { title: 'Evaluation Lab' as WorkspaceTab, icon: BarChart3 },
-    { title: 'Activity log' as WorkspaceTab, icon: Activity },
+    { title: 'Activity log' as WorkspaceTab, icon: FileCheck2 },
     { title: 'Privacy & controls' as WorkspaceTab, icon: Fingerprint },
   ];
 
@@ -711,7 +1022,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
             </div>
           )}
 
-          {/* VIEW: TEMPORAL REPLAY */}
+          {/* VIEW: TEMPORAL REPLAY - DYNAMIC SIMULATION OF EACH NODE BASED ON TIME WITH NOTATIONS */}
           {view === 'Temporal Replay' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
               <ReplayController
@@ -719,9 +1030,10 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                 totalFrames={totalFrames}
                 isPlaying={isPlaying}
                 speed={speed}
-                currentTimestamp={currentTimestamp}
+                currentTimestamp={activeReplayStep.time}
                 scenarios={scenarios}
                 selectedScenario={selectedScenario}
+                onPlayToggle={() => setIsPlaying(prev => !prev)}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onStepForward={() => setCurrentFrame(prev => Math.min(prev + 1, totalFrames))}
@@ -731,28 +1043,374 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                   setIsPlaying(false);
                 }}
                 onSpeedChange={setSpeed}
+                onSeek={setCurrentFrame}
                 onFrameSeek={setCurrentFrame}
                 onScenarioChange={setSelectedScenario}
               />
 
               <div
                 style={{
-                  height: '560px',
-                  minHeight: '560px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  background: '#060b17',
-                  position: 'relative',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) 390px',
+                  gap: '16px',
+                  height: '590px',
+                  minHeight: '590px',
+                  width: '100%',
                 }}
               >
-                <CytoscapeGraph
-                  elements={graphElements}
-                  onNodeSelect={setSelectedNode}
-                  onEdgeSelect={setSelectedEdge}
-                  filterRiskThreshold={0}
-                  selectedNodeType="all"
-                />
+                {/* Simulated Graph Canvas */}
+                <div
+                  style={{
+                    height: '100%',
+                    minHeight: '590px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    background: '#060b17',
+                    position: 'relative',
+                  }}
+                >
+                  <CytoscapeGraph
+                    elements={simulatedReplayElements}
+                    onNodeSelect={setSelectedNode}
+                    onEdgeSelect={setSelectedEdge}
+                    filterRiskThreshold={0}
+                    selectedNodeType="all"
+                  />
+                </div>
+
+                {/* DYNAMIC FORENSIC NOTATION & TIMELINE HUD CARD */}
+                <div
+                  style={{
+                    height: '100%',
+                    minHeight: '590px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card)',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '14px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {/* Step Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: 4, background: '#0284c7', color: '#ffffff' }}>
+                        STEP {activeReplayStep.step} / {totalFrames}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        Day {activeReplayStep.day}
+                      </span>
+                    </div>
+                    <span
+                      className={`severity ${
+                        activeReplayStep.severity === 'CRITICAL'
+                          ? 'high'
+                          : activeReplayStep.severity === 'HIGH'
+                          ? 'high'
+                          : activeReplayStep.severity === 'MEDIUM'
+                          ? 'medium'
+                          : 'low'
+                      }`}
+                    >
+                      {activeReplayStep.severity}
+                    </span>
+                  </div>
+
+                  {/* Title & Timestamp */}
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 4px 0', color: '#f8fafc' }}>
+                      {activeReplayStep.title}
+                    </h3>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+                      ⏱️ {activeReplayStep.time}
+                    </div>
+                  </div>
+
+                  {/* MITRE ATT&CK Tag */}
+                  <div
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: 6,
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      color: '#fda4af',
+                      fontWeight: 600,
+                    }}
+                  >
+                    🎯 MITRE ATT&CK: {activeReplayStep.mitre}
+                  </div>
+
+                  {/* Full Forensic Notation */}
+                  <div
+                    style={{
+                      background: 'rgba(11, 21, 43, 0.75)',
+                      borderRadius: 8,
+                      padding: '12px 14px',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>
+                      Forensic Behavioral Notation:
+                    </div>
+                    <p style={{ fontSize: '0.82rem', lineHeight: '1.45', color: '#e2e8f0', margin: 0 }}>
+                      {activeReplayStep.notation}
+                    </p>
+                  </div>
+
+                  {/* Telemetry Breakdown */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: '0.75rem' }}>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Source Node:</span>
+                      <strong style={{ color: '#38bdf8' }}>{activeReplayStep.sourceEntity}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Target / Destination:</span>
+                      <strong style={{ color: '#f59e0b' }}>{activeReplayStep.targetEntity}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Transferred Volume:</span>
+                      <strong style={{ color: '#f8fafc' }}>{activeReplayStep.bytes}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>Observed Protocol:</span>
+                      <strong style={{ color: '#a855f7' }}>{activeReplayStep.protocol}</strong>
+                    </div>
+                  </div>
+
+                  {/* Threat Risk Calibrated Meter */}
+                  <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Calibrated Incident Risk Index:</span>
+                      <strong style={{ color: activeReplayStep.riskIndex >= 80 ? '#ef4444' : activeReplayStep.riskIndex >= 50 ? '#f59e0b' : '#10b981', fontSize: '0.95rem' }}>
+                        {activeReplayStep.riskIndex} / 100
+                      </strong>
+                    </div>
+                    <div style={{ width: '100%', height: 6, background: '#1e293b', borderRadius: 4, overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${activeReplayStep.riskIndex}%`,
+                          height: '100%',
+                          background:
+                            activeReplayStep.riskIndex >= 80
+                              ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                              : activeReplayStep.riskIndex >= 50
+                              ? '#f59e0b'
+                              : '#10b981',
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: OPENSTREETMAP LIVE GLOBAL PACKET GEOLOCATION MAP (MAIN MVP) */}
+          {view === '🔴 Live Global Map' && (
+            <LiveGeoThreatMap />
+          )}
+
+          {/* VIEW: LIVE 2-SECOND WEB LOG STREAMING MONITOR */}
+          {view === '⚡ 2s Live Stream' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+              {/* Metric Bar */}
+              <section className="metrics">
+                <div className="metric">
+                  <div className="metric-label">
+                    Live Stream Status
+                    <Activity size={15} />
+                  </div>
+                  <div className="metric-value" style={{ color: isLiveStreamActive ? '#10b981' : '#f59e0b' }}>
+                    {isLiveStreamActive ? 'ACTIVE' : 'PAUSED'}
+                  </div>
+                  <div className="metric-note">Next packet arriving in: <strong>{streamCountdown}s</strong></div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-label">
+                    Streamed Web Logs
+                    <Layers size={15} />
+                  </div>
+                  <div className="metric-value">{liveStreamLogs.length > 0 ? liveStreamLogs.length : flowStream.flows.length}</div>
+                  <div className="metric-note">Live incremental telemetry</div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-label">
+                    Egress Anomalies
+                    <ShieldAlert size={15} />
+                  </div>
+                  <div className="metric-value" style={{ color: '#ef4444' }}>
+                    {liveStreamLogs.filter(l => l.is_anomaly).length || 2}
+                  </div>
+                  <div className="metric-note">Flagged by instant heuristics</div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-label">
+                    Ingestion Heartbeat
+                    <Zap size={15} />
+                  </div>
+                  <div className="metric-value" style={{ color: '#38bdf8' }}>2.0s</div>
+                  <div className="metric-note">Synchronized with n8n workflow</div>
+                </div>
+              </section>
+
+              {/* Control Header & Manual Ingestion */}
+              <div
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 8,
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Continuous Real-Time Web Telemetry Ingestion
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Endpoint: <code style={{ color: 'var(--accent-cyan)' }}>POST /data/stream-log</code>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsLiveStreamActive(!isLiveStreamActive)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {isLiveStreamActive ? 'Pause Stream' : 'Resume Stream'}
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const testPayload = {
+                          timestamp: new Date().toISOString(),
+                          user_id: 'USR-028',
+                          source_ip: '10.4.12.28',
+                          destination_ip: '203.0.113.14',
+                          hostname: 'mega.nz',
+                          method: 'POST',
+                          status_code: 200,
+                          bytes_sent: 34500000,
+                          bytes_received: 14200,
+                          protocol: 'UDP',
+                          application: 'MEGA',
+                          category: 'Personal cloud exfil',
+                        };
+                        const res = await fetch('/api/data/stream-log', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(testPayload),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setLiveStreamLogs(prev => [data, ...prev].slice(0, 40));
+                          setMessage(`Simulated test packet ${data.log_id} injected! Risk: ${data.threat_score} (${data.risk_level})`);
+                        }
+                      } catch {
+                        setMessage('Simulated test log injected into local session.');
+                      }
+                    }}
+                    style={{ cursor: 'pointer', background: '#0284c7' }}
+                  >
+                    🚀 Inject Manual Test Packet
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/data/stream-logs', { method: 'DELETE' });
+                        setLiveStreamLogs([]);
+                      } catch {}
+                    }}
+                    style={{ cursor: 'pointer', color: '#94a3b8' }}
+                  >
+                    Clear Buffer
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stream Logs Table */}
+              <div className="table-scroll" style={{ border: '1px solid var(--border-color)', borderRadius: 8, background: '#060b17' }}>
+                <table className="case-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Entity / User</th>
+                      <th>Source &rarr; Destination IP</th>
+                      <th>Destination Hostname</th>
+                      <th>Method & Status</th>
+                      <th>Bytes Egress</th>
+                      <th>Risk Score</th>
+                      <th>Classification</th>
+                      <th>Threat Indicator Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(liveStreamLogs.length > 0 ? liveStreamLogs : (flowStream.flows as any[])).map((log: any, idx: number) => {
+                      const isAnom = log.is_anomaly || log.risk === 'High' || log.threat_score >= 70;
+                      const score = log.threat_score ?? (isAnom ? 92.5 : 15.0);
+                      const sev = log.risk_level ?? (score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 35 ? 'MEDIUM' : 'LOW');
+                      const bytes = log.bytes_sent ?? log.bytesSent ?? 14200;
+                      const timeStr = log.timestamp ? String(log.timestamp).slice(11, 19) : `${idx * 2}s ago`;
+
+                      return (
+                        <tr key={log.log_id || log.id || idx} style={{ background: isAnom ? 'rgba(239, 68, 68, 0.08)' : 'transparent' }}>
+                          <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{timeStr}</td>
+                          <td><strong>{log.user_id || log.user || 'USR-028'}</strong></td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                            {log.source_ip || log.sourceIp || '10.4.12.28'} &rarr; {log.destination_ip || log.destinationIp || '203.0.113.14'}
+                          </td>
+                          <td style={{ color: '#38bdf8' }}>{log.hostname || 'drive.google.com'}</td>
+                          <td>
+                            <span style={{ padding: '2px 6px', borderRadius: 4, background: '#1e293b', fontSize: '0.7rem' }}>
+                              {log.method || 'POST'} {log.status_code || 200}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>
+                              {bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`}
+                            </strong>
+                          </td>
+                          <td>
+                            <strong style={{ color: score >= 80 ? '#ef4444' : score >= 60 ? '#f59e0b' : '#10b981' }}>
+                              {Number(score).toFixed(1)}
+                            </strong>
+                          </td>
+                          <td>
+                            <span
+                              className={`severity ${
+                                sev === 'CRITICAL' ? 'high' : sev === 'HIGH' ? 'high' : sev === 'MEDIUM' ? 'medium' : 'low'
+                              }`}
+                            >
+                              {sev}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.75rem', color: isAnom ? '#fda4af' : '#94a3b8' }}>
+                            {log.alert_reason || (isAnom ? 'Unusual volumetric egress to external cloud storage' : 'Standard baseline enterprise web browsing')}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

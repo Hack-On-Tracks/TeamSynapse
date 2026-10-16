@@ -113,7 +113,7 @@ export function NetworkFlows({ stream, cases, selected, onSelect, onOpenCase }: 
   const [descending, setDescending] = useState(true);
   const setSelected = onSelect;
   const statusOf = (f: FlowRecord) => flowStatus(f, cases);
-  const categories = [...new Set(flows.map(f => f.category ?? UNCLASSIFIED))].sort();
+  const categories = [...new Set(flows.map(f => f.category ?? UNCLASSIFIED))].sort() as string[];
   const needle = query.trim().toLowerCase();
   const field = sortFields[sortBy];
   const visible = flows

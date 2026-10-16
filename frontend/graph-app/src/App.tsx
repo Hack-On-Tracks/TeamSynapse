@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { WorkspaceView } from './components/WorkspaceView';
 
 // Default mock elements when backend is spinning up or offline
-const DEFAULT_FALLBACK_ELEMENTS = {
+export const DEFAULT_FALLBACK_ELEMENTS = {
   nodes: [
     { data: { id: 'usr-analyst-01', label: 'E049 (Fin Analyst)', type: 'user', riskScore: 84.5, totalBytes: 850000000, assetTier: 3, firstSeen: '2026-10-14 08:00', lastSeen: '2026-10-15 03:15' } },
     { data: { id: 'usr-engineer-02', label: 'E102 (DevOps Lead)', type: 'user', riskScore: 18.2, totalBytes: 34000000, assetTier: 2, firstSeen: '2026-10-14 09:30', lastSeen: '2026-10-15 11:00' } },

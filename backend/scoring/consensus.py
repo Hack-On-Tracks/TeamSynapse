@@ -173,12 +173,13 @@ class ConsensusEngine:
         benign_info = self.BENIGN_OPERATIONAL_CATALOGUE.get(entity_id)
         malicious_info = self.MALICIOUS_GROUND_TRUTH_CONTEXT.get(entity_id)
 
-        if live_query and self.ollama_client.available():
+        if (live_query or live_query is None) and self.ollama_client.available():
             # Run live Ollama call
             live_res = self.ollama_client.verify_threat(entity_id=entity_id, indicators=row)
             return {
                 "entity_id": entity_id,
                 "model": "qwen3:4b",
+                "models_dir": live_res.get("models_dir", "D:\\ollama_models"),
                 "verdict": live_res.get("verdict", "SUSPICIOUS_ANOMALY"),
                 "confidence": live_res.get("confidence", 80.0),
                 "rationale": live_res.get("analysis", "Verified by Qwen3:4b model."),
