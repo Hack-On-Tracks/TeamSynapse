@@ -2183,17 +2183,31 @@ h2 {
 }
 
 .gps-permission-banner {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid #ef4444;
+  background: rgba(14, 31, 69, 0.95);
+  border: 1px solid #38bdf8;
   border-radius: 8px;
-  padding: 10px 16px;
-  margin-bottom: 12px;
-  color: #fca5a5;
-  font-size: 0.78rem;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  color: #e0f2fe;
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.25);
+}
+
+.gps-btn-network {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.gps-btn-network:hover {
+  background: rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+  color: #ffffff;
 }
 
 
