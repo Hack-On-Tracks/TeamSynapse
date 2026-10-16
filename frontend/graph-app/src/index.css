@@ -1656,4 +1656,154 @@ h2 {
   margin-bottom: 0.5rem;
 }
 
+/* ========================================================================= */
+/* HIGH-CONTRAST 4 SUBTABS NAVIGATION BAR & BUTTONS                         */
+/* ========================================================================= */
+.inv-subtabs-nav-bar {
+  background-color: #081229;
+  border: 2px solid #223c72;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  margin-bottom: 1.5rem;
+}
+
+.inv-subtabs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .inv-subtabs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.inv-subtab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 2px solid #1c3569;
+  background-color: #0b1a3d;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.inv-subtab-btn:hover {
+  background-color: #12285a;
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.inv-subtab-btn.active-tab-1 {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, #062b1f 100%) !important;
+  border: 2.5px solid #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.4), inset 0 0 15px rgba(16, 185, 129, 0.15) !important;
+}
+
+.inv-subtab-btn.active-tab-2 {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.35) 0%, #082d49 100%) !important;
+  border: 2.5px solid #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.4), inset 0 0 15px rgba(56, 189, 248, 0.15) !important;
+}
+
+.inv-subtab-btn.active-tab-3 {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.35) 0%, #171b47 100%) !important;
+  border: 2.5px solid #818cf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(129, 140, 248, 0.4), inset 0 0 15px rgba(129, 140, 248, 0.15) !important;
+}
+
+.inv-subtab-btn.active-tab-4 {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0%, #3d2303 100%) !important;
+  border: 2.5px solid #f59e0b !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(245, 158, 11, 0.15) !important;
+}
+
+/* ========================================================================= */
+/* CURRENT STATUS BADGES (TABLE & MODAL)                                     */
+/* ========================================================================= */
+.inv-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inv-status-pill:hover {
+  transform: scale(1.04);
+}
+
+.inv-pill-threat {
+  background-color: rgba(220, 38, 38, 0.35) !important;
+  border: 2px solid #ef4444 !important;
+  color: #fee2e2 !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+}
+
+.inv-pill-investigating {
+  background-color: rgba(217, 119, 6, 0.35) !important;
+  border: 2px solid #f59e0b !important;
+  color: #fef3c7 !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.45);
+}
+
+.inv-pill-open {
+  background-color: rgba(2, 132, 199, 0.35) !important;
+  border: 2px solid #38bdf8 !important;
+  color: #e0f2fe !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+}
+
+.inv-pill-safe {
+  background-color: rgba(5, 150, 105, 0.35) !important;
+  border: 2px solid #10b981 !important;
+  color: #d1fae5 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+}
+
+.inv-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.inv-dot-pulse.dot-threat {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: livePulse 1s infinite;
+}
+.inv-dot-pulse.dot-investigating {
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+.inv-dot-pulse.dot-open {
+  background-color: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+.inv-dot-pulse.dot-safe {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+
 

@@ -87,11 +87,11 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
   const [modalSendingEmail, setModalSendingEmail] = useState<boolean>(false);
   const [modalEmailStatus, setModalEmailStatus] = useState<string | null>(null);
 
-  // Main 4 Cases Status State: 'Open' | 'Under Investigation' | 'Threat Detected' | 'Safe'
-  const [entityStatusMap, setEntityStatusMap] = useState<Record<string, 'Open' | 'Under Investigation' | 'Threat Detected' | 'Safe'>>({
-    'EMP006': 'Threat Detected',
-    'EMP001': 'Threat Detected',
-    'EMP002': 'Under Investigation',
+  // Main 4 Cases Status State: 'Open' | 'Investigating' | 'Threat' | 'Safe'
+  const [entityStatusMap, setEntityStatusMap] = useState<Record<string, 'Open' | 'Investigating' | 'Threat' | 'Safe'>>({
+    'EMP006': 'Threat',
+    'EMP001': 'Threat',
+    'EMP002': 'Investigating',
     'EMP003': 'Open',
     'EMP004': 'Open',
     'EMP005': 'Safe',
@@ -113,7 +113,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
     setModalSendingEmail(true);
     setModalEmailStatus(null);
     try {
-      const currentStatus = entityStatusMap[detailsModalRecord.entity_id] || 'Under Investigation';
+      const currentStatus = entityStatusMap[detailsModalRecord.entity_id] || 'Investigating';
       const res = await sendEmailReport({
         recipient: modalEmail,
         entity_id: detailsModalRecord.entity_id,
@@ -139,37 +139,48 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
     }
   };
 
-  const renderStatusBadge = (status: 'Open' | 'Under Investigation' | 'Threat Detected' | 'Safe') => {
-    switch (status) {
-      case 'Threat Detected':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-950/90 text-red-400 border border-red-700 shadow-sm shadow-red-900/40 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            Threat Detected
-          </span>
-        );
-      case 'Under Investigation':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-950/90 text-amber-300 border border-amber-700 shadow-sm shadow-amber-900/40 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Under Investigation
-          </span>
-        );
-      case 'Open':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-sky-950/90 text-sky-300 border border-sky-700 shadow-sm shadow-sky-900/40 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-            Open
-          </span>
-        );
-      case 'Safe':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-700 shadow-sm shadow-emerald-900/40 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Safe
-          </span>
-        );
+  const renderStatusBadge = (status: 'Open' | 'Investigating' | 'Threat' | 'Safe', entityId?: string) => {
+    let pillClass = 'inv-pill-open';
+    let dotClass = 'dot-open';
+    let label = 'Open';
+    if (status === 'Threat') {
+      pillClass = 'inv-pill-threat';
+      dotClass = 'dot-threat';
+      label = 'Threat';
+    } else if (status === 'Investigating') {
+      pillClass = 'inv-pill-investigating';
+      dotClass = 'dot-investigating';
+      label = 'Investigating';
+    } else if (status === 'Safe') {
+      pillClass = 'inv-pill-safe';
+      dotClass = 'dot-safe';
+      label = 'Safe';
     }
+
+    return (
+      <span
+        className={`inv-status-pill ${pillClass}`}
+        title="Current Status: Click 'Details' to change in popup or click here to cycle"
+        onClick={(e) => {
+          if (entityId) {
+            e.stopPropagation();
+            const nextMap: Record<'Open' | 'Investigating' | 'Threat' | 'Safe', 'Open' | 'Investigating' | 'Threat' | 'Safe'> = {
+              'Open': 'Investigating',
+              'Investigating': 'Threat',
+              'Threat': 'Safe',
+              'Safe': 'Open',
+            };
+            setEntityStatusMap((prev) => ({
+              ...prev,
+              [entityId]: nextMap[prev[entityId] || 'Open'],
+            }));
+          }
+        }}
+      >
+        <span className={`inv-dot-pulse ${dotClass}`} />
+        {label}
+      </span>
+    );
   };
 
   useEffect(() => {
@@ -364,22 +375,18 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
       )}
 
       {/* 4 SUBTABS HEADER NAVIGATION - HIGH CONTRAST */}
-      <div className="bg-[#081024] border-2 border-slate-700 rounded-xl p-2.5 shadow-xl">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div className="inv-subtabs-nav-bar">
+        <div className="inv-subtabs-grid">
           {/* Subtab 1: Rule-Based Engine */}
           <button
             type="button"
             onClick={() => setActiveSubTab('rule_engine')}
-            className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg text-xs md:text-sm font-bold transition-all duration-200 border-2 ${
-              activeSubTab === 'rule_engine'
-                ? 'bg-emerald-950/90 border-emerald-400 text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400/30'
-                : 'bg-[#0f1d3a] border-slate-700/80 text-slate-200 hover:text-white hover:border-emerald-500/50 hover:bg-[#16274e]'
-            }`}
+            className={`inv-subtab-btn ${activeSubTab === 'rule_engine' ? 'active-tab-1' : ''}`}
           >
-            <Shield className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'rule_engine' ? 'text-emerald-400' : 'text-slate-400'}`} />
+            <Shield className="w-5 h-5 flex-shrink-0" style={{ color: activeSubTab === 'rule_engine' ? '#10b981' : '#64748b' }} />
             <div className="text-left">
-              <div className="leading-tight text-slate-100">1. Rule-Based Engine</div>
-              <div className="text-[10px] font-medium text-emerald-300/80 hidden sm:block">Deterministic Heuristics</div>
+              <div className="leading-tight text-white font-extrabold text-sm">1. Rule-Based Engine</div>
+              <div className="text-[11px] font-semibold text-emerald-300">Deterministic Heuristics</div>
             </div>
           </button>
 
@@ -387,16 +394,12 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
           <button
             type="button"
             onClick={() => setActiveSubTab('scratch_model')}
-            className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg text-xs md:text-sm font-bold transition-all duration-200 border-2 ${
-              activeSubTab === 'scratch_model'
-                ? 'bg-sky-950/90 border-sky-400 text-white shadow-lg shadow-sky-500/20 ring-2 ring-sky-400/30'
-                : 'bg-[#0f1d3a] border-slate-700/80 text-slate-200 hover:text-white hover:border-sky-500/50 hover:bg-[#16274e]'
-            }`}
+            className={`inv-subtab-btn ${activeSubTab === 'scratch_model' ? 'active-tab-2' : ''}`}
           >
-            <Layers className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'scratch_model' ? 'text-sky-400' : 'text-slate-400'}`} />
+            <Layers className="w-5 h-5 flex-shrink-0" style={{ color: activeSubTab === 'scratch_model' ? '#38bdf8' : '#64748b' }} />
             <div className="text-left">
-              <div className="leading-tight text-slate-100">2. Scratch Model Output</div>
-              <div className="text-[10px] font-medium text-sky-300/80 hidden sm:block">32-Feature Isolation Forest</div>
+              <div className="leading-tight text-white font-extrabold text-sm">2. Scratch Model Output</div>
+              <div className="text-[11px] font-semibold text-sky-300">32-Feature Isolation Forest</div>
             </div>
           </button>
 
@@ -404,16 +407,12 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
           <button
             type="button"
             onClick={() => setActiveSubTab('llm_verification')}
-            className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg text-xs md:text-sm font-bold transition-all duration-200 border-2 ${
-              activeSubTab === 'llm_verification'
-                ? 'bg-indigo-950/90 border-indigo-400 text-white shadow-lg shadow-indigo-500/20 ring-2 ring-indigo-400/30'
-                : 'bg-[#0f1d3a] border-slate-700/80 text-slate-200 hover:text-white hover:border-indigo-500/50 hover:bg-[#16274e]'
-            }`}
+            className={`inv-subtab-btn ${activeSubTab === 'llm_verification' ? 'active-tab-3' : ''}`}
           >
-            <Sparkles className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'llm_verification' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: activeSubTab === 'llm_verification' ? '#818cf8' : '#64748b' }} />
             <div className="text-left">
-              <div className="leading-tight text-slate-100">3. LLM Verification</div>
-              <div className="text-[10px] font-medium text-indigo-300/80 hidden sm:block">Ollama Qwen3:4b Inference</div>
+              <div className="leading-tight text-white font-extrabold text-sm">3. LLM Verification</div>
+              <div className="text-[11px] font-semibold text-indigo-300">Ollama Qwen3:4b Inference</div>
             </div>
           </button>
 
@@ -421,16 +420,12 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
           <button
             type="button"
             onClick={() => setActiveSubTab('final_consensus')}
-            className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg text-xs md:text-sm font-bold transition-all duration-200 border-2 ${
-              activeSubTab === 'final_consensus'
-                ? 'bg-amber-950/90 border-amber-400 text-white shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30'
-                : 'bg-[#0f1d3a] border-slate-700/80 text-slate-200 hover:text-white hover:border-amber-500/50 hover:bg-[#16274e]'
-            }`}
+            className={`inv-subtab-btn ${activeSubTab === 'final_consensus' ? 'active-tab-4' : ''}`}
           >
-            <Award className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'final_consensus' ? 'text-amber-400' : 'text-slate-400'}`} />
+            <Award className="w-5 h-5 flex-shrink-0" style={{ color: activeSubTab === 'final_consensus' ? '#f59e0b' : '#64748b' }} />
             <div className="text-left">
-              <div className="leading-tight text-slate-100">4. Final Evaluated Part</div>
-              <div className="text-[10px] font-medium text-amber-300/80 hidden sm:block">Consensus & Zero False-Positive</div>
+              <div className="leading-tight text-white font-extrabold text-sm">4. Final Evaluated Part</div>
+              <div className="text-[11px] font-semibold text-amber-300">Consensus & Zero False-Positive</div>
             </div>
           </button>
         </div>
@@ -598,7 +593,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                 <thead className="bg-[#0e1a35] text-slate-300 uppercase text-[11px] font-bold border-b border-[#1e2d4d]">
                   <tr>
                     <th className="py-3 px-4">Entity ID</th>
-                    <th className="py-3 px-4">Case Status</th>
+                    <th className="py-3 px-4 text-sky-400 font-extrabold text-xs">Current Status</th>
                     <th className="py-3 px-4">Triggered Rules</th>
                     <th className="py-3 px-4">Signal Breakdown</th>
                     <th className="py-3 px-4">Rule Score</th>
@@ -620,7 +615,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                         {item.entity_id}
                       </td>
                       <td className="py-3.5 px-4">
-                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Under Investigation')}
+                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Investigating', item.entity_id)}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex flex-wrap gap-1 max-w-xs">
@@ -792,7 +787,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                 <thead className="bg-[#0e1a35] text-slate-300 uppercase text-[11px] font-bold border-b border-[#1e2d4d]">
                   <tr>
                     <th className="py-3 px-4">Entity ID</th>
-                    <th className="py-3 px-4">Case Status</th>
+                    <th className="py-3 px-4 text-sky-400 font-extrabold text-xs">Current Status</th>
                     <th className="py-3 px-4">Scratch ML Score</th>
                     <th className="py-3 px-4">Decision Status</th>
                     <th className="py-3 px-4">Top Feature Deviations (Z-Scores)</th>
@@ -813,7 +808,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                         {item.entity_id}
                       </td>
                       <td className="py-3.5 px-4">
-                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Under Investigation')}
+                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Investigating', item.entity_id)}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
@@ -966,7 +961,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                 <thead className="bg-[#0e1a35] text-slate-300 uppercase text-[11px] font-bold border-b border-[#1e2d4d]">
                   <tr>
                     <th className="py-3 px-4">Entity ID</th>
-                    <th className="py-3 px-4">Case Status</th>
+                    <th className="py-3 px-4 text-sky-400 font-extrabold text-xs">Current Status</th>
                     <th className="py-3 px-4">LLM Verdict</th>
                     <th className="py-3 px-4">Confidence</th>
                     <th className="py-3 px-4">MITRE / Contextual Rationale</th>
@@ -987,7 +982,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                         {item.entity_id}
                       </td>
                       <td className="py-3.5 px-4">
-                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Under Investigation')}
+                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Investigating', item.entity_id)}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -1116,7 +1111,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                 <thead className="bg-[#0e1a35] text-slate-300 uppercase text-[11px] font-bold border-b border-[#1e2d4d]">
                   <tr>
                     <th className="py-3 px-4">Entity ID</th>
-                    <th className="py-3 px-4">Case Status</th>
+                    <th className="py-3 px-4 text-sky-400 font-extrabold text-xs">Current Status</th>
                     <th className="py-3 px-4">1. Rule Engine</th>
                     <th className="py-3 px-4">2. Scratch ML</th>
                     <th className="py-3 px-4">3. Ollama Verification</th>
@@ -1139,7 +1134,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Threat Detected')}
+                        {renderStatusBadge(entityStatusMap[item.entity_id] || 'Threat', item.entity_id)}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-200">
@@ -1266,7 +1261,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                   <thead className="bg-[#0e1a35] text-slate-300 uppercase text-[11px] font-bold border-b border-[#1e2d4d]">
                     <tr>
                       <th className="py-3 px-4">Entity ID</th>
-                      <th className="py-3 px-4">Case Status</th>
+                      <th className="py-3 px-4 text-sky-400 font-extrabold text-xs">Current Status</th>
                       <th className="py-3 px-4">Department & Role</th>
                       <th className="py-3 px-4">Initial Alert Reason</th>
                       <th className="py-3 px-4">Verified Operational Justification</th>
@@ -1282,7 +1277,7 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                           {item.entity_id}
                         </td>
                         <td className="py-3.5 px-4">
-                          {renderStatusBadge(entityStatusMap[item.entity_id] || 'Safe')}
+                          {renderStatusBadge(entityStatusMap[item.entity_id] || 'Safe', item.entity_id)}
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-slate-200">
@@ -1410,24 +1405,24 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-100 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                      Main Case Status (4 SOC Classifications):
+                      Current Status (Updates Live in Table):
                     </span>
                     <p className="text-[11px] text-slate-300 mt-0.5">
-                      Select active case state to triage this entity in the SOC investigation queue.
+                      Select status below — updates immediately for {detailsModalRecord.entity_id} in the main table.
                     </p>
                   </div>
                   <div>
-                    {renderStatusBadge(entityStatusMap[detailsModalRecord.entity_id] || 'Under Investigation')}
+                    {renderStatusBadge(entityStatusMap[detailsModalRecord.entity_id] || 'Investigating')}
                   </div>
                 </div>
 
                 <div className="inv-modal-grid-4">
-                  {(['Open', 'Under Investigation', 'Threat Detected', 'Safe'] as const).map((statusOption) => {
-                    const isSelected = (entityStatusMap[detailsModalRecord.entity_id] || 'Under Investigation') === statusOption;
+                  {(['Open', 'Investigating', 'Threat', 'Safe'] as const).map((statusOption) => {
+                    const isSelected = (entityStatusMap[detailsModalRecord.entity_id] || 'Investigating') === statusOption;
                     let activeClass = '';
                     if (isSelected) {
-                      if (statusOption === 'Threat Detected') activeClass = 'active-threat';
-                      else if (statusOption === 'Under Investigation') activeClass = 'active-investigation';
+                      if (statusOption === 'Threat') activeClass = 'active-threat';
+                      else if (statusOption === 'Investigating') activeClass = 'active-investigation';
                       else if (statusOption === 'Open') activeClass = 'active-open';
                       else activeClass = 'active-safe';
                     }
@@ -1444,10 +1439,10 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                         className={`inv-status-btn ${activeClass}`}
                       >
                         <span
-                          className={`w-2 h-2 rounded-full ${
-                            statusOption === 'Threat Detected'
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            statusOption === 'Threat'
                               ? 'bg-red-400'
-                              : statusOption === 'Under Investigation'
+                              : statusOption === 'Investigating'
                               ? 'bg-amber-400'
                               : statusOption === 'Open'
                               ? 'bg-sky-400'
@@ -1458,6 +1453,16 @@ export const InvestigationMultiLayerEngine: React.FC<Props> = ({ onSelectCase })
                       </button>
                     );
                   })}
+                </div>
+
+                <div className="mt-3 px-3 py-1.5 rounded-lg bg-[#07132a] border border-[#1e3a6d] flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Live Table Sync:
+                  </span>
+                  <span className="font-bold text-sky-300">
+                    Reflected in table as &quot;{entityStatusMap[detailsModalRecord.entity_id] || 'Investigating'}&quot;
+                  </span>
                 </div>
               </div>
 
