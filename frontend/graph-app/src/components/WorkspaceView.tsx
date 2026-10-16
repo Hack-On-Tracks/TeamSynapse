@@ -20,6 +20,7 @@ import {
   LockKeyhole,
   Menu,
   Shield,
+  ShieldAlert,
   ShieldCheck,
   Users,
   X,
@@ -45,6 +46,139 @@ import { ThreatHuntingView } from './ThreatHuntingView';
 import { InvestigationMultiLayerEngine } from './InvestigationMultiLayerEngine';
 import { LiveGeoThreatMap } from './LiveGeoThreatMap';
 import { DEFAULT_FALLBACK_ELEMENTS } from '../App';
+
+// Realistic Enterprise Telemetry Stream Templates for 2-Second Live Ingestion
+const ENTERPRISE_STREAM_TEMPLATES = [
+  {
+    user_id: 'USR-049',
+    user_name: 'E049 (Fin Analyst)',
+    source_ip: '10.4.12.49',
+    destination_ip: '198.51.100.24',
+    hostname: 'backup-sync.storage.example.net',
+    method: 'POST',
+    status_code: 206,
+    base_bytes: 42500000,
+    threat_score: 94.2,
+    risk_level: 'CRITICAL',
+    alert_reason: 'Unscheduled volumetric backup exfiltration (>40 MB) over QUIC to cloud storage',
+  },
+  {
+    user_id: 'USR-102',
+    user_name: 'E102 (DevOps Lead)',
+    source_ip: '10.4.15.102',
+    destination_ip: '140.82.121.4',
+    hostname: 'api.github.com',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 48000,
+    threat_score: 8.5,
+    risk_level: 'LOW',
+    alert_reason: 'Standard baseline Git repository synchronization over HTTPS',
+  },
+  {
+    user_id: 'USR-028',
+    user_name: 'E028 (Compromised)',
+    source_ip: '10.4.12.28',
+    destination_ip: '203.0.113.14',
+    hostname: 'gfs270n113.userstorage.mega.co.nz',
+    method: 'POST',
+    status_code: 200,
+    base_bytes: 185000000,
+    threat_score: 96.8,
+    risk_level: 'CRITICAL',
+    alert_reason: 'Massive archive upload to personal storage platform outside enterprise domain',
+  },
+  {
+    user_id: 'USR-012',
+    user_name: 'E012 (HR Specialist)',
+    source_ip: '10.4.18.12',
+    destination_ip: '52.14.92.11',
+    hostname: 'workday.saas.corp',
+    method: 'POST',
+    status_code: 200,
+    base_bytes: 18400,
+    threat_score: 11.2,
+    risk_level: 'LOW',
+    alert_reason: 'Routine employee portal benefits query conforming to peer baseline',
+  },
+  {
+    user_id: 'USR-028',
+    user_name: 'E028 (Compromised)',
+    source_ip: '10.4.12.28',
+    destination_ip: '198.51.100.99',
+    hostname: 'c2-beacon.tunnel-edge.net',
+    method: 'CONNECT',
+    status_code: 101,
+    base_bytes: 840000,
+    threat_score: 88.4,
+    risk_level: 'HIGH',
+    alert_reason: 'High entropy DNS tunneling sub-beacon query observed on UDP 53',
+  },
+  {
+    user_id: 'USR-049',
+    user_name: 'E049 (Fin Analyst)',
+    source_ip: '10.4.12.49',
+    destination_ip: '10.0.4.1',
+    hostname: 'dc01.corp.internal',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 32000,
+    threat_score: 22.0,
+    risk_level: 'LOW',
+    alert_reason: 'Internal domain controller Kerberos ticket renewal',
+  },
+  {
+    user_id: 'USR-061',
+    user_name: 'E061 (Accountant)',
+    source_ip: '10.6.3.61',
+    destination_ip: '192.0.2.14',
+    hostname: 'swift-wire.interbank.fin',
+    method: 'POST',
+    status_code: 201,
+    base_bytes: 4200000,
+    threat_score: 82.0,
+    risk_level: 'HIGH',
+    alert_reason: 'Tier-3 Financial transaction webhook initiated during off-hours',
+  },
+  {
+    user_id: 'USR-072',
+    user_name: 'E072 (Support Lead)',
+    source_ip: '10.8.1.72',
+    destination_ip: '54.230.12.44',
+    hostname: 'app.slack.com',
+    method: 'GET',
+    status_code: 200,
+    base_bytes: 12500,
+    threat_score: 6.2,
+    risk_level: 'LOW',
+    alert_reason: 'Real-time WebSocket heartbeat for enterprise communications',
+  },
+];
+
+const generateInitialSeedLogs = () => {
+  const now = Date.now();
+  return ENTERPRISE_STREAM_TEMPLATES.map((tmpl, idx) => {
+    const time = new Date(now - (idx + 1) * 2000).toISOString();
+    const isAnomaly = tmpl.risk_level === 'CRITICAL' || tmpl.risk_level === 'HIGH';
+    return {
+      log_id: `LOG-INIT-${String(1000 + idx)}`,
+      timestamp: time,
+      user_id: tmpl.user_id,
+      user_name: tmpl.user_name,
+      source_ip: tmpl.source_ip,
+      destination_ip: tmpl.destination_ip,
+      hostname: tmpl.hostname,
+      method: tmpl.method,
+      status_code: tmpl.status_code,
+      bytes_sent: tmpl.base_bytes,
+      threat_score: tmpl.threat_score,
+      risk_level: tmpl.risk_level,
+      is_anomaly: isAnomaly,
+      alert_reason: tmpl.alert_reason,
+      isNew: false,
+    };
+  });
+};
 
 export type WorkspaceTab =
   | 'Overview'
@@ -102,9 +236,10 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   const [selectedScenario, setSelectedScenario] = useState('ALL_SCENARIOS');
 
   // Live 2-second stream state
-  const [liveStreamLogs, setLiveStreamLogs] = useState<any[]>([]);
+  const [liveStreamLogs, setLiveStreamLogs] = useState<any[]>(() => generateInitialSeedLogs());
   const [isLiveStreamActive, setIsLiveStreamActive] = useState<boolean>(true);
   const [streamCountdown, setStreamCountdown] = useState<number>(2.0);
+  const streamSeqRef = React.useRef<number>(0);
 
   const flowStream = useFlowStream();
 
@@ -377,25 +512,50 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
     return { nodes: simulatedNodes, edges: simulatedEdges };
   }, [graphElements, activeReplayStep]);
 
-  // 2-Second Live Log Stream Polling Engine (only ticks when viewing the live stream tab)
+  // 2-Second Live Log Stream Ingestion & Transition Engine (ticks when viewing the live stream tab)
   useEffect(() => {
     if (!isLiveStreamActive || view !== '⚡ 2s Live Stream') return;
 
-    const fetchStreamLogs = async () => {
-      try {
-        const res = await fetch('/api/data/stream-logs?limit=40');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.logs && data.logs.length > 0) {
-            setLiveStreamLogs(data.logs);
-          }
-        }
-      } catch {}
+    // Helper to generate the next real-time web log packet with jitter
+    const synthesizeNextPacket = () => {
+      const idx = streamSeqRef.current % ENTERPRISE_STREAM_TEMPLATES.length;
+      streamSeqRef.current += 1;
+      const tmpl = ENTERPRISE_STREAM_TEMPLATES[idx];
+      const jitterFactor = 0.85 + Math.random() * 0.35;
+      const bytes = Math.round(tmpl.base_bytes * jitterFactor);
+      const isAnomaly = tmpl.risk_level === 'CRITICAL' || tmpl.risk_level === 'HIGH';
+
+      const nextLog = {
+        log_id: `LOG-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        timestamp: new Date().toISOString(),
+        user_id: tmpl.user_id,
+        user_name: tmpl.user_name,
+        source_ip: tmpl.source_ip,
+        destination_ip: tmpl.destination_ip,
+        hostname: tmpl.hostname,
+        method: tmpl.method,
+        status_code: tmpl.status_code,
+        bytes_sent: bytes,
+        threat_score: Number((tmpl.threat_score + (Math.random() * 2 - 1)).toFixed(1)),
+        risk_level: tmpl.risk_level,
+        is_anomaly: isAnomaly,
+        alert_reason: tmpl.alert_reason,
+        isNew: true,
+      };
+
+      // Dispatched asynchronously to backend stream store
+      fetch('/api/data/stream-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextLog),
+      }).catch(() => {});
+
+      return nextLog;
     };
 
-    fetchStreamLogs();
     const interval = setInterval(() => {
-      fetchStreamLogs();
+      const nextLog = synthesizeNextPacket();
+      setLiveStreamLogs(prev => [nextLog, ...prev.map(l => ({ ...l, isNew: false }))].slice(0, 45));
       setStreamCountdown(2.0);
     }, 2000);
 
@@ -1228,7 +1388,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                   <div className="metric-value" style={{ color: isLiveStreamActive ? '#10b981' : '#f59e0b' }}>
                     {isLiveStreamActive ? 'ACTIVE' : 'PAUSED'}
                   </div>
-                  <div className="metric-note">Next packet arriving in: <strong>{streamCountdown}s</strong></div>
+                  <div className="metric-note">Next packet arriving in: <strong>{streamCountdown.toFixed(1)}s</strong></div>
                 </div>
 
                 <div className="metric">
@@ -1236,7 +1396,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                     Streamed Web Logs
                     <Layers size={15} />
                   </div>
-                  <div className="metric-value">{liveStreamLogs.length > 0 ? liveStreamLogs.length : flowStream.flows.length}</div>
+                  <div className="metric-value">{liveStreamLogs.length}</div>
                   <div className="metric-note">Live incremental telemetry</div>
                 </div>
 
@@ -1246,7 +1406,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                     <ShieldAlert size={15} />
                   </div>
                   <div className="metric-value" style={{ color: '#ef4444' }}>
-                    {liveStreamLogs.filter(l => l.is_anomaly).length || 2}
+                    {liveStreamLogs.filter(l => l.is_anomaly || l.threat_score >= 70).length}
                   </div>
                   <div className="metric-note">Flagged by instant heuristics</div>
                 </div>
@@ -1301,6 +1461,7 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                         const testPayload = {
                           timestamp: new Date().toISOString(),
                           user_id: 'USR-028',
+                          user_name: 'E028 (Compromised)',
                           source_ip: '10.4.12.28',
                           destination_ip: '203.0.113.14',
                           hostname: 'mega.nz',
@@ -1319,7 +1480,18 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                         });
                         if (res.ok) {
                           const data = await res.json();
-                          setLiveStreamLogs(prev => [data, ...prev].slice(0, 40));
+                          const manualLog = {
+                            ...data,
+                            user_name: 'E028 (Compromised)',
+                            source_ip: '10.4.12.28',
+                            destination_ip: '203.0.113.14',
+                            hostname: 'mega.nz',
+                            method: 'POST',
+                            status_code: 200,
+                            bytes_sent: 34500000,
+                            isNew: true,
+                          };
+                          setLiveStreamLogs(prev => [manualLog, ...prev.map(l => ({ ...l, isNew: false }))].slice(0, 45));
                           setMessage(`Simulated test packet ${data.log_id} injected! Risk: ${data.threat_score} (${data.risk_level})`);
                         }
                       } catch {
@@ -1337,14 +1509,27 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                     onClick={async () => {
                       try {
                         await fetch('/api/data/stream-logs', { method: 'DELETE' });
-                        setLiveStreamLogs([]);
                       } catch {}
+                      setLiveStreamLogs([]);
                     }}
                     style={{ cursor: 'pointer', color: '#94a3b8' }}
                   >
                     Clear Buffer
                   </Button>
                 </div>
+              </div>
+
+              {/* Sub-2s Ingestion Heartbeat Progress Bar */}
+              <div style={{ height: 3, width: '100%', background: 'rgba(30, 45, 77, 0.6)', borderRadius: 2, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.min(100, Math.max(0, ((2.0 - streamCountdown) / 2.0) * 100))}%`,
+                    background: 'var(--accent-cyan)',
+                    transition: 'width 0.1s linear',
+                    boxShadow: '0 0 8px rgba(56, 189, 248, 0.6)',
+                  }}
+                />
               </div>
 
               {/* Stream Logs Table */}
@@ -1364,23 +1549,44 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {(liveStreamLogs.length > 0 ? liveStreamLogs : (flowStream.flows as any[])).map((log: any, idx: number) => {
-                      const isAnom = log.is_anomaly || log.risk === 'High' || log.threat_score >= 70;
+                    {liveStreamLogs.map((log: any, idx: number) => {
+                      const isAnom = Boolean(log.is_anomaly || log.risk === 'High' || log.threat_score >= 70);
                       const score = log.threat_score ?? (isAnom ? 92.5 : 15.0);
                       const sev = log.risk_level ?? (score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : score >= 35 ? 'MEDIUM' : 'LOW');
                       const bytes = log.bytes_sent ?? log.bytesSent ?? 14200;
                       const timeStr = log.timestamp ? String(log.timestamp).slice(11, 19) : `${idx * 2}s ago`;
 
                       return (
-                        <tr key={log.log_id || log.id || idx} style={{ background: isAnom ? 'rgba(239, 68, 68, 0.08)' : 'transparent' }}>
-                          <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{timeStr}</td>
-                          <td><strong>{log.user_id || log.user || 'USR-028'}</strong></td>
+                        <tr
+                          key={log.log_id || `LOG-${idx}`}
+                          className={log.isNew ? (isAnom ? 'live-log-row-enter-anom' : 'live-log-row-enter') : ''}
+                          style={{
+                            background: isAnom ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                            transition: 'background 0.5s ease',
+                          }}
+                        >
+                          <td style={{ fontFamily: 'monospace', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {idx === 0 && isLiveStreamActive && (
+                                <span className="live-badge-glow">
+                                  <span className="live-pulse-dot" /> LIVE
+                                </span>
+                              )}
+                              <span>{timeStr}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <strong>{log.user_name || log.user_id || log.user || 'USR-028'}</strong>
+                            {log.user_id && log.user_name && (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{log.user_id}</div>
+                            )}
+                          </td>
                           <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                             {log.source_ip || log.sourceIp || '10.4.12.28'} &rarr; {log.destination_ip || log.destinationIp || '203.0.113.14'}
                           </td>
-                          <td style={{ color: '#38bdf8' }}>{log.hostname || 'drive.google.com'}</td>
+                          <td style={{ color: '#38bdf8', fontWeight: 500 }}>{log.hostname || 'drive.google.com'}</td>
                           <td>
-                            <span style={{ padding: '2px 6px', borderRadius: 4, background: '#1e293b', fontSize: '0.7rem' }}>
+                            <span style={{ padding: '2px 6px', borderRadius: 4, background: '#1e293b', fontSize: '0.7rem', fontWeight: 600 }}>
                               {log.method || 'POST'} {log.status_code || 200}
                             </span>
                           </td>
