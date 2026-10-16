@@ -314,46 +314,186 @@ export const MAP_PROVIDERS: Record<MapTypeKey, MapTypeConfig> = {
   },
 };
 
+export interface LaptopGpsState {
+  isActive: boolean;
+  isAcquiring: boolean;
+  isWatching: boolean;
+  accuracy: number;
+  altitude: number | null;
+  speed: number | null;
+  heading: number | null;
+  timestamp: string | null;
+  permissionState: 'granted' | 'prompt' | 'denied' | 'unsupported' | 'unknown';
+  error: string | null;
+}
+
 export const LiveGeoThreatMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const packetLinesLayerRef = useRef<any>(null);
+  const sensorMarkerRef = useRef<any>(null);
+  const gpsAccuracyCircleRef = useRef<any>(null);
+  const watchIdRef = useRef<number | null>(null);
 
-  // User's Live Location state (Default to Mumbai / India SOC or browser geolocation)
+  // User's Live Location state (Default to Mumbai / India SOC or laptop hardware GPS)
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; city: string; accuracy: number }>({
     lat: 19.076,
     lng: 72.8777,
     city: 'Current Sensor Location (HQ)',
     accuracy: 25,
   });
-  const [geoStatus, setGeoStatus] = useState<string>('Detecting live geolocation...');
+
+  const [gpsState, setGpsState] = useState<LaptopGpsState>({
+    isActive: false,
+    isAcquiring: false,
+    isWatching: false,
+    accuracy: 25,
+    altitude: null,
+    speed: null,
+    heading: null,
+    timestamp: null,
+    permissionState: 'unknown',
+    error: null,
+  });
+
+  const [geoStatus, setGeoStatus] = useState<string>('Detecting in-built laptop GPS hardware...');
   const [mapMode, setMapMode] = useState<MapTypeKey>('dark');
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [lastTransmission, setLastTransmission] = useState<any | null>(null);
 
-  // 1. Obtain browser live location
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
+  // Method to acquire Laptop in-built GPS coordinates
+  const acquireLaptopGps = (centerMap = true) => {
+    if (!('geolocation' in navigator)) {
+      setGpsState(prev => ({
+        ...prev,
+        error: 'Hardware GPS / Geolocation is not supported by your browser.',
+        permissionState: 'unsupported',
+      }));
+      setGeoStatus('⚠️ Browser does not support geolocation hardware.');
+      return;
+    }
+
+    setGpsState(prev => ({ ...prev, isAcquiring: true, error: null }));
+    setGeoStatus('🛰️ Interfacing with in-built laptop GPS hardware...');
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
+        const formattedTimestamp = new Date(position.timestamp).toLocaleTimeString();
+
+        setLiveLocation({
+          lat: latitude,
+          lng: longitude,
+          city: 'In-Built Laptop GPS Sensor',
+          accuracy: Math.round(accuracy),
+        });
+
+        setGpsState({
+          isActive: true,
+          isAcquiring: false,
+          isWatching: watchIdRef.current !== null,
+          accuracy: Math.round(accuracy),
+          altitude: altitude !== null ? Math.round(altitude) : null,
+          speed: speed !== null ? Math.round(speed * 3.6) : null, // km/h
+          heading: heading !== null ? Math.round(heading) : null,
+          timestamp: formattedTimestamp,
+          permissionState: 'granted',
+          error: null,
+        });
+
+        setGeoStatus(`🟢 In-Built Laptop GPS Locked: ${latitude.toFixed(6)}° N, ${longitude.toFixed(6)}° E (±${Math.round(accuracy)}m)`);
+
+        if (centerMap && mapRef.current) {
+          mapRef.current.flyTo([latitude, longitude], 13, { animate: true, duration: 1.5 });
+        }
+      },
+      err => {
+        let errorMsg = 'Failed to acquire laptop GPS location.';
+        let perm: 'denied' | 'prompt' | 'unknown' = 'unknown';
+
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          perm = 'denied';
+          errorMsg = 'Laptop GPS permission blocked. Click the lock/settings icon in the browser address bar to allow Location access, then click "Acquire Laptop GPS".';
+        } else if (err.code === 2) {
+          // POSITION_UNAVAILABLE
+          errorMsg = 'Hardware GPS satellite fix unavailable indoors. Using SOC Primary Network Sensor.';
+        } else if (err.code === 3) {
+          // TIMEOUT
+          errorMsg = 'Hardware GPS request timed out. Retrying with SOC Network Sensor...';
+        }
+
+        setGpsState(prev => ({
+          ...prev,
+          isAcquiring: false,
+          permissionState: perm,
+          error: errorMsg,
+        }));
+        setGeoStatus(`⚠️ ${errorMsg}`);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  // Toggle continuous hardware tracking watch
+  const toggleContinuousTracking = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setGpsState(prev => ({ ...prev, isWatching: false }));
+      setGeoStatus('⏸️ Continuous GPS watch paused.');
+    } else {
+      if (!('geolocation' in navigator)) return;
+      setGpsState(prev => ({ ...prev, isWatching: true, error: null }));
+      const id = navigator.geolocation.watchPosition(
         position => {
+          const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
           setLiveLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            city: 'Live Device Geolocation',
-            accuracy: Math.round(position.coords.accuracy),
+            lat: latitude,
+            lng: longitude,
+            city: 'In-Built Laptop GPS Origin (Live Stream)',
+            accuracy: Math.round(accuracy),
           });
-          setGeoStatus(`🟢 Live GPS Locked (±${Math.round(position.coords.accuracy)}m)`);
+          setGpsState(prev => ({
+            ...prev,
+            isActive: true,
+            isAcquiring: false,
+            isWatching: true,
+            accuracy: Math.round(accuracy),
+            altitude: altitude !== null ? Math.round(altitude) : null,
+            speed: speed !== null ? Math.round(speed * 3.6) : null,
+            heading: heading !== null ? Math.round(heading) : null,
+            timestamp: new Date(position.timestamp).toLocaleTimeString(),
+            permissionState: 'granted',
+            error: null,
+          }));
+          setGeoStatus(`🟢 Live Laptop GPS Tracking: ${latitude.toFixed(6)}° N, ${longitude.toFixed(6)}° E (±${Math.round(accuracy)}m)`);
         },
         err => {
-          setGeoStatus('🌐 Using SOC Primary Network Sensor (19.0760° N, 72.8777° E)');
+          console.warn('GPS Watch error', err);
         },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
-    } else {
-      setGeoStatus('🌐 Using SOC Primary Network Sensor');
+      watchIdRef.current = id;
     }
+  };
+
+  const centerOnLaptop = () => {
+    if (mapRef.current) {
+      mapRef.current.flyTo([liveLocation.lat, liveLocation.lng], 14, { animate: true, duration: 1.5 });
+    }
+  };
+
+  // 1. Initial attempt to obtain laptop GPS on mount
+  useEffect(() => {
+    acquireLaptopGps(false);
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
   // 2. Initialize Leaflet Map
@@ -435,28 +575,52 @@ export const LiveGeoThreatMap: React.FC = () => {
       packetLinesLayerRef.current.clearLayers();
     }
 
-    // A. Add Current Live Location Beacon Marker
+    // A. Add Current Live Location Beacon Marker and Accuracy Circle
+    if (sensorMarkerRef.current) {
+      sensorMarkerRef.current.remove();
+      sensorMarkerRef.current = null;
+    }
+    if (gpsAccuracyCircleRef.current) {
+      gpsAccuracyCircleRef.current.remove();
+      gpsAccuracyCircleRef.current = null;
+    }
+
+    gpsAccuracyCircleRef.current = L.circle([liveLocation.lat, liveLocation.lng], {
+      radius: Math.max(liveLocation.accuracy, 20),
+      color: '#0284c7',
+      weight: 1.5,
+      fillColor: '#38bdf8',
+      fillOpacity: 0.12,
+      dashArray: '5, 5',
+    }).addTo(mapRef.current);
+
     const sensorIcon = L.divIcon({
       className: 'custom-live-location-pin',
       html: `
-        <div style="position: relative; width: 36px; height: 36px;">
-          <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(56, 189, 248, 0.35); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="position: absolute; inset: 6px; border-radius: 50%; background: #0284c7; border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px #38bdf8;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #ffffff;"></div>
+        <div style="position: relative; width: 40px; height: 40px;">
+          <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(56, 189, 248, 0.4); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="position: absolute; inset: 6px; border-radius: 50%; background: #0284c7; border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px #38bdf8;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></div>
           </div>
         </div>
       `,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
     });
 
-    const sensorMarker = L.marker([liveLocation.lat, liveLocation.lng], { icon: sensorIcon }).addTo(mapRef.current);
-    sensorMarker.bindPopup(`
-      <div style="font-family: sans-serif; color: #0f172a; font-size: 12px; padding: 4px;">
-        <strong style="color: #0284c7; font-size: 13px;">📍 YOUR LIVE SENSOR ORIGIN</strong><br/>
-        <b>Coordinates:</b> ${liveLocation.lat.toFixed(4)}°, ${liveLocation.lng.toFixed(4)}°<br/>
-        <b>Status:</b> Active Sensor Probe<br/>
-        <b>Live Packet Ingestion:</b> 1 packet / 2.0s
+    sensorMarkerRef.current = L.marker([liveLocation.lat, liveLocation.lng], { icon: sensorIcon }).addTo(mapRef.current);
+    sensorMarkerRef.current.bindPopup(`
+      <div style="font-family: sans-serif; color: #0f172a; font-size: 12px; padding: 6px; min-width: 210px;">
+        <strong style="color: #0284c7; font-size: 13px;">💻 IN-BUILT LAPTOP GPS SENSOR</strong><br/>
+        <div style="margin-top: 5px; padding: 6px 8px; background: #f0f9ff; border-radius: 4px; border: 1px solid #bae6fd; font-size: 11px; line-height: 1.45;">
+          <b>Hardware Sensor:</b> ${gpsState.isActive ? '🟢 Active GPS Fix' : '🌐 SOC Network Anchor'}<br/>
+          <b>Latitude:</b> ${liveLocation.lat.toFixed(6)}° N<br/>
+          <b>Longitude:</b> ${liveLocation.lng.toFixed(6)}° E<br/>
+          <b>Hardware Accuracy:</b> &plusmn;${liveLocation.accuracy} meters<br/>
+          ${gpsState.altitude !== null ? `<b>Elevation:</b> ${gpsState.altitude} m AMSL<br/>` : ''}
+          ${gpsState.speed !== null ? `<b>Ground Velocity:</b> ${gpsState.speed} km/h<br/>` : ''}
+          <b>Packet Flow:</b> Active Threat Exfiltration Origin (2.0s pulse)
+        </div>
       </div>
     `);
 
@@ -684,6 +848,150 @@ export const LiveGeoThreatMap: React.FC = () => {
           >
             <Send size={14} />
             SEND TEST PACKET
+          </button>
+        </div>
+      </div>
+
+      {/* Laptop GPS Permission Warning (if blocked) */}
+      {gpsState.error && (
+        <div className="gps-permission-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <div>
+              <strong style={{ color: '#ffffff' }}>Laptop Hardware GPS Notice:</strong> {gpsState.error}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => acquireLaptopGps(true)}
+              style={{
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 4,
+                padding: '5px 12px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              RETRY GPS FIX
+            </button>
+            <button
+              onClick={() => setGpsState(prev => ({ ...prev, error: null }))}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                color: '#cbd5e1',
+                border: 'none',
+                borderRadius: 4,
+                padding: '5px 10px',
+                fontSize: '0.74rem',
+                cursor: 'pointer',
+              }}
+            >
+              DISMISS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Laptop In-Built Hardware GPS Telemetry & Control Panel */}
+      <div className="laptop-gps-panel">
+        <div className="laptop-gps-left">
+          <div className="gps-hardware-icon-box">
+            <Navigation size={20} />
+          </div>
+          <div className="gps-title-group">
+            <div className="gps-main-title">
+              <span>LAPTOP IN-BUILT GPS SENSOR HARDWARE</span>
+              <span
+                className="gps-accuracy-pill"
+                style={{
+                  background: gpsState.isActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  color: gpsState.isActive ? '#34d399' : '#fbbf24',
+                  borderColor: gpsState.isActive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)',
+                }}
+              >
+                {gpsState.isActive ? `🟢 HARDWARE LOCKED (±${liveLocation.accuracy}m)` : '🟡 SOC PROBE FALLBACK'}
+              </span>
+              {gpsState.isWatching && (
+                <span
+                  className="gps-accuracy-pill"
+                  style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: '#38bdf8' }}
+                >
+                  📡 LIVE TRACKING ACTIVE
+                </span>
+              )}
+            </div>
+            <div className="gps-coords-display">
+              <span>
+                Latitude: <strong>{liveLocation.lat.toFixed(6)}° N</strong>
+              </span>
+              <span>&bull;</span>
+              <span>
+                Longitude: <strong>{liveLocation.lng.toFixed(6)}° E</strong>
+              </span>
+              <span>&bull;</span>
+              <span>
+                Hardware Precision: <strong>±{liveLocation.accuracy} meters</strong>
+              </span>
+              {gpsState.altitude !== null && (
+                <>
+                  <span>&bull;</span>
+                  <span>
+                    Elevation: <strong>{gpsState.altitude}m AMSL</strong>
+                  </span>
+                </>
+              )}
+              {gpsState.speed !== null && (
+                <>
+                  <span>&bull;</span>
+                  <span>
+                    Ground Speed: <strong>{gpsState.speed} km/h</strong>
+                  </span>
+                </>
+              )}
+              {gpsState.timestamp && (
+                <>
+                  <span>&bull;</span>
+                  <span style={{ color: '#94a3b8' }}>Satellite Sync: {gpsState.timestamp}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Laptop GPS Action Buttons */}
+        <div className="laptop-gps-actions">
+          {/* Acquire / Refresh Laptop GPS */}
+          <button
+            onClick={() => acquireLaptopGps(true)}
+            className="gps-action-btn gps-btn-locate"
+            disabled={gpsState.isAcquiring}
+            title="Request explicit permission from laptop hardware GPS and center the map"
+          >
+            <Navigation size={14} />
+            {gpsState.isAcquiring ? 'ACQUIRING SATELLITE FIX...' : 'ACCESS LAPTOP GPS'}
+          </button>
+
+          {/* Toggle Continuous Live Tracking */}
+          <button
+            onClick={toggleContinuousTracking}
+            className={`gps-action-btn ${gpsState.isWatching ? 'gps-btn-tracking-active' : 'gps-btn-tracking-idle'}`}
+            title="Keep tracking laptop coordinates in real-time as you move"
+          >
+            <Activity size={14} />
+            {gpsState.isWatching ? 'LIVE TRACK: ON' : 'CONTINUOUS TRACK'}
+          </button>
+
+          {/* Center Map on Laptop */}
+          <button
+            onClick={centerOnLaptop}
+            className="gps-action-btn gps-btn-center"
+            title="Fly map directly to current laptop GPS coordinates"
+          >
+            <MapPin size={14} />
+            CENTER ON LAPTOP
           </button>
         </div>
       </div>
