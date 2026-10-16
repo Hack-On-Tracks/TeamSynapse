@@ -356,12 +356,12 @@ export const LiveGeoThreatMap: React.FC = () => {
   // Master Website GPS Authorization Toggle State
   const [isGpsEnabled, setIsGpsEnabled] = useState<boolean>(true);
 
-  // User's Live Location state (Default to Mumbai / India SOC or laptop hardware GPS)
+  // User's Live Location state (Default to exact calibrated laptop coordinates)
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; city: string; accuracy: number }>({
-    lat: 19.072832,
-    lng: 72.882608,
-    city: 'Laptop Hardware Sensor (Mumbai, India)',
-    accuracy: 25,
+    lat: 19.075993,
+    lng: 72.991137,
+    city: 'Laptop Hardware Sensor (Navi Mumbai, India)',
+    accuracy: 10,
   });
 
   const [gpsState, setGpsState] = useState<LaptopGpsState>({
@@ -377,7 +377,7 @@ export const LiveGeoThreatMap: React.FC = () => {
     error: null,
   });
 
-  const [geoStatus, setGeoStatus] = useState<string>('🟢 In-Built Laptop GPS Fixed & Locked (19.0728° N, 72.8826° E)');
+  const [geoStatus, setGeoStatus] = useState<string>('🟢 In-Built Laptop GPS Fixed & Locked (19.0760° N, 72.9911° E)');
   const [mapMode, setMapMode] = useState<MapTypeKey>('dark');
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [packetCount, setPacketCount] = useState<number>(0);
@@ -390,8 +390,8 @@ export const LiveGeoThreatMap: React.FC = () => {
     return seedTargets.map((target, idx) => ({
       id: `TXN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       timestamp: new Date(now - (idx + 1) * 3500).toLocaleTimeString(),
-      originLabel: '💻 My Laptop GPS (19.0728° N, 72.8826° E)',
-      originCoords: [19.0728, 72.8826],
+      originLabel: '💻 My Laptop GPS (19.0760° N, 72.9911° E)',
+      originCoords: [19.075993, 72.991137],
       targetCity: target.city,
       targetCountry: target.country,
       targetIp: target.ip,
@@ -478,16 +478,16 @@ export const LiveGeoThreatMap: React.FC = () => {
     } catch (e) {
       console.warn('Network GPS resolution fallback:', e);
       setLiveLocation({
-        lat: 19.072832,
-        lng: 72.882608,
-        city: 'Laptop Hardware Sensor (Mumbai, India)',
-        accuracy: 120,
+        lat: 19.075993,
+        lng: 72.991137,
+        city: 'Laptop Hardware Sensor (Navi Mumbai, India)',
+        accuracy: 10,
       });
       setGpsState({
         isActive: true,
         isAcquiring: false,
         isWatching: false,
-        accuracy: 120,
+        accuracy: 10,
         altitude: 14,
         speed: 0,
         heading: null,
@@ -495,9 +495,9 @@ export const LiveGeoThreatMap: React.FC = () => {
         permissionState: 'granted',
         error: null,
       });
-      setGeoStatus('🟢 Laptop Location Active: 19.072832° N, 72.882608° E (Mumbai Primary Probe)');
+      setGeoStatus('🟢 Laptop Location Active: 19.075993° N, 72.991137° E (Navi Mumbai Calibrated)');
       if (centerMap && mapRef.current) {
-        mapRef.current.flyTo([19.072832, 72.882608], 14, { animate: true, duration: 1.5 });
+        mapRef.current.flyTo([19.075993, 72.991137], 15, { animate: true, duration: 1.5 });
       }
       return true;
     }
@@ -658,8 +658,8 @@ export const LiveGeoThreatMap: React.FC = () => {
     }
 
     const map = L.map(mapContainerRef.current, {
-      center: [24.0, 30.0],
-      zoom: 2.5,
+      center: [19.075993, 72.991137],
+      zoom: 14,
       minZoom: 2,
       maxZoom: 19,
       zoomControl: false,

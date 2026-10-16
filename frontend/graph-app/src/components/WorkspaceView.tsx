@@ -832,7 +832,8 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
                 title="Log out from local SQLite session"
                 aria-label="Log Out"
               >
-                <LogOut size={15} />
+                <LogOut size={13} />
+                <span className="logout-action-text">Exit</span>
               </button>
             ) : (
               <ShieldCheck size={15} className="ml-auto text-muted-foreground" />
@@ -893,6 +894,33 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
             <Button variant="ghost" size="icon" title="Help" aria-label="Help" onClick={() => setInfo('help')}>
               <CircleHelp size={16} />
             </Button>
+
+            {/* Operator Session & Topbar Logout Section */}
+            {onLogout && (
+              <div className="topbar-user-section">
+                <div className="topbar-user-pill" title={`Signed in as ${currentUser?.username || 'analyst'} (${currentUser?.role || 'operator'})`}>
+                  <div className="topbar-user-avatar">
+                    {currentUser?.full_name
+                      ? currentUser.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                      : (currentUser?.username || 'OP').substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="topbar-user-meta">
+                    <span className="topbar-user-name">{currentUser?.full_name || currentUser?.username || 'Analyst'}</span>
+                    <span className="topbar-user-role">{currentUser?.role || 'Operator'}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="topbar-logout-btn"
+                  onClick={onLogout}
+                  title="Sign out of CipherSentinel session"
+                  aria-label="Log Out"
+                >
+                  <LogOut size={13} />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -1874,7 +1902,41 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
           {/* VIEW: PRIVACY & CONTROLS */}
           {view === 'Privacy & controls' && (
             <section>
-              <div className="notice">
+              {/* Active Operator Session & Logout Section */}
+              <div className="session-logout-card">
+                <div className="session-logout-header">
+                  <div className="flex items-center gap-3">
+                    <div className="session-avatar-badge">
+                      {currentUser?.full_name
+                        ? currentUser.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                        : (currentUser?.username || 'OP').substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#f8fafc' }}>
+                        {currentUser?.full_name || currentUser?.username || 'Security Analyst'}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1" style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                        <span>Operator: <strong style={{ color: '#38bdf8' }}>{currentUser?.username || 'analyst'}</strong></span>
+                        <span>·</span>
+                        <span>Role: <strong style={{ color: '#34d399' }}>{currentUser?.role || 'Analyst'}</strong></span>
+                        <span>·</span>
+                        <span className="sqlite-enclave-badge" style={{ padding: '0.1rem 0.45rem', fontSize: '0.68rem' }}>SQLite Enclave: data/users.db</span>
+                      </div>
+                    </div>
+                  </div>
+                  {onLogout && (
+                    <Button variant="destructive" size="sm" onClick={onLogout} className="logout-banner-btn">
+                      <LogOut size={14} />
+                      Sign Out & Terminate Session
+                    </Button>
+                  )}
+                </div>
+                <p className="detail-summary mt-2.5" style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                  Active SQLite session token authorized. Logging out revokes credentials, clears browser session tokens, and returns to the authentication gate.
+                </p>
+              </div>
+
+              <div className="notice mt-4">
                 Design commitments from the CipherSentinel security specification. Operational privacy enforced at ingestion.
               </div>
               {[
