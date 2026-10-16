@@ -27,7 +27,7 @@
         <div class="header">
           <div class="brand">🛡️ CipherSentinel Autonomous SOC Operations</div>
           <h1 class="title">CONFIRMED THREAT INCIDENT BRIEF</h1>
-          <div class="meta">Target Entity: <strong style="color:#ffffff;">EMP006</strong> · Dispatched: 2026-10-16 02:10:02 UTC</div>
+          <div class="meta">Target Entity: <strong style="color:#ffffff;">EMP006</strong> · Dispatched: 2026-10-16 03:18:27 UTC</div>
           <span class="badge">Risk Score: 88.7 / 100</span>
         </div>
         
@@ -36,15 +36,15 @@
           <div class="grid">
             <div class="grid-row">
               <div class="grid-cell cell-label">1. Rule Engine</div>
-              <div class="grid-cell cell-val"><strong>Score: 83.75</strong> — R1_VOLUME_SPIKE (High Byte Egress)</div>
+              <div class="grid-cell cell-val"><strong>Score: 83.75</strong> — Volumetric egress & off-hours authentication spike</div>
             </div>
             <div class="grid-row">
               <div class="grid-cell cell-label">2. Scratch ML Model</div>
-              <div class="grid-cell cell-val"><strong>Score: 53.4%</strong> (Isolation Forest 32-dim Status: <span style="color:#38bdf8;">OUTLIER</span>)</div>
+              <div class="grid-cell cell-val"><strong>Score: 53.4%</strong> (Isolation Forest 32-dim Status: <span style="color:#38bdf8;">ANOMALOUS (Isolation Forest Contamination < 0.01)</span>)</div>
             </div>
             <div class="grid-row">
               <div class="grid-cell cell-label">3. Ollama Qwen3:4b (D:\)</div>
-              <div class="grid-cell cell-val"><strong>Verdict: CONFIRMED_THREAT</strong> (96% confidence)</div>
+              <div class="grid-cell cell-val"><strong>Verdict: CONFIRMED_THREAT</strong> (95% confidence)</div>
             </div>
             <div class="grid-row">
               <div class="grid-cell cell-label">Multi-Engine Status</div>
@@ -54,12 +54,12 @@
 
           <div class="section-title">Ollama Deep Reasoning & Chain-of-Thought Rationale</div>
           <div class="rationale-box">
-            Confirmed malicious insider threat: 3 consecutive failed Kerberos authentications followed by 550MB transfer to unseen foreign IP at 02:30 AM. Compromised / targeted asset: Confidential Q3 Earnings & Board Meeting Minutes.
+            Corroborated by all 3 layers: Rule Engine (CRITICAL), Scratch ML Model (OUTLIER), and Ollama Qwen3:4b (96.0% Confirmed). Target: Confirmed malicious insider threat: 3 consecutive failed Kerberos authentications followed by 550MB transfer to unseen foreign IP at 02:30 AM. Compromised / targeted asset: Confidential Q3 Earnings & Board Meeting Minutes.
           </div>
 
           
           <div class="section-title">Analyst Custom Notes</div>
-          <div style="font-size:12px; color:#94a3b8; font-style:italic; padding: 8px 0;">Investigation Dossier for EMP006 (RULE ENGINE). Current Status: Threat. Calibrated Incident Risk: 88.7%.</div>
+          <div style="font-size:12px; color:#94a3b8; font-style:italic; padding: 8px 0;">Automated incident brief triggered by n8n SOC Workflow</div>
           
         </div>
 

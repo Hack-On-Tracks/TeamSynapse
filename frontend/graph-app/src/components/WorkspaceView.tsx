@@ -29,6 +29,8 @@ import {
   Zap,
   BarChart3,
   RefreshCw,
+  LogOut,
+  Database,
 } from '../icons';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
@@ -300,6 +302,14 @@ interface WorkspaceProps {
   graphElements: any;
   onRefreshGraph?: () => void;
   apiConnected: boolean;
+  currentUser?: {
+    id?: string;
+    username: string;
+    full_name?: string;
+    email?: string;
+    role?: string;
+  } | null;
+  onLogout?: () => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceProps> = ({
@@ -307,6 +317,8 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
   graphElements,
   onRefreshGraph,
   apiConnected,
+  currentUser,
+  onLogout,
 }) => {
   const [view, setView] = useState<WorkspaceTab>(initialView);
   const [cases, setCases] = useState<CaseRecord[]>(demoCases);
@@ -794,12 +806,37 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
             </p>
           </div>
           <div className="profile">
-            <div className="avatar">JS</div>
-            <div>
-              <div className="text-xs font-semibold">Janhvi S.</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">Security analyst</div>
+            <div className="avatar">
+              {currentUser?.full_name
+                ? currentUser.full_name
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase()
+                : (currentUser?.username || 'OP').substring(0, 2).toUpperCase()}
             </div>
-            <ShieldCheck size={15} className="ml-auto text-muted-foreground" />
+            <div className="profile-info" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div className="text-xs font-semibold truncate">
+                {currentUser?.full_name || currentUser?.username || 'Janhvi S.'}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 capitalize truncate">
+                {currentUser?.role ? `${currentUser.role} • SQLite Enclave` : 'Security analyst'}
+              </div>
+            </div>
+            {onLogout ? (
+              <button
+                type="button"
+                className="logout-action-btn"
+                onClick={onLogout}
+                title="Log out from local SQLite session"
+                aria-label="Log Out"
+              >
+                <LogOut size={15} />
+              </button>
+            ) : (
+              <ShieldCheck size={15} className="ml-auto text-muted-foreground" />
+            )}
           </div>
         </div>
       </aside>
@@ -824,6 +861,10 @@ export const WorkspaceView: React.FC<WorkspaceProps> = ({
           </div>
 
           <div className="topbar-actions">
+            <span className="sqlite-enclave-badge flex items-center gap-1.5" title="Local SQLite Database: data/users.db">
+              <Database size={12} className="text-emerald-400" />
+              <span>SQLite: users.db</span>
+            </span>
             <span className="system-status flex items-center gap-1.5">
               <span className={`status-dot ${apiConnected ? '' : 'paused'}`} />
               {apiConnected ? 'Live Backend Connected' : 'Local Session Mode'}

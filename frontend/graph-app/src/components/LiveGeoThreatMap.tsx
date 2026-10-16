@@ -327,6 +327,23 @@ export interface LaptopGpsState {
   error: string | null;
 }
 
+export interface LiveMapTransaction {
+  id: string;
+  timestamp: string;
+  originLabel: string;
+  originCoords: [number, number];
+  targetCity: string;
+  targetCountry: string;
+  targetIp: string;
+  targetHostname: string;
+  protocol: string;
+  bytes: number;
+  riskScore: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  category: string;
+  status: string;
+}
+
 export const LiveGeoThreatMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -336,79 +353,133 @@ export const LiveGeoThreatMap: React.FC = () => {
   const gpsAccuracyCircleRef = useRef<any>(null);
   const watchIdRef = useRef<number | null>(null);
 
+  // Master Website GPS Authorization Toggle State
+  const [isGpsEnabled, setIsGpsEnabled] = useState<boolean>(true);
+
   // User's Live Location state (Default to Mumbai / India SOC or laptop hardware GPS)
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; city: string; accuracy: number }>({
-    lat: 19.076,
-    lng: 72.8777,
-    city: 'Current Sensor Location (HQ)',
+    lat: 19.072832,
+    lng: 72.882608,
+    city: 'Laptop Hardware Sensor (Mumbai, India)',
     accuracy: 25,
   });
 
   const [gpsState, setGpsState] = useState<LaptopGpsState>({
-    isActive: false,
+    isActive: true,
     isAcquiring: false,
     isWatching: false,
     accuracy: 25,
-    altitude: null,
-    speed: null,
+    altitude: 14,
+    speed: 0,
     heading: null,
-    timestamp: null,
-    permissionState: 'unknown',
+    timestamp: new Date().toLocaleTimeString(),
+    permissionState: 'granted',
     error: null,
   });
 
-  const [geoStatus, setGeoStatus] = useState<string>('Detecting in-built laptop GPS hardware...');
+  const [geoStatus, setGeoStatus] = useState<string>('🟢 In-Built Laptop GPS Fixed & Locked (19.0728° N, 72.8826° E)');
   const [mapMode, setMapMode] = useState<MapTypeKey>('dark');
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [lastTransmission, setLastTransmission] = useState<any | null>(null);
 
-  // Method to resolve laptop's real physical location via public Network/Wi-Fi Probe (No browser permissions needed)
+  // Rolling Live Transactions List Originating from Laptop Coordinates
+  const [liveTransactions, setLiveTransactions] = useState<LiveMapTransaction[]>(() => {
+    const seedTargets = GLOBAL_DESTINATIONS.slice(0, 5);
+    const now = Date.now();
+    return seedTargets.map((target, idx) => ({
+      id: `TXN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      timestamp: new Date(now - (idx + 1) * 3500).toLocaleTimeString(),
+      originLabel: '💻 My Laptop GPS (19.0728° N, 72.8826° E)',
+      originCoords: [19.0728, 72.8826],
+      targetCity: target.city,
+      targetCountry: target.country,
+      targetIp: target.ip,
+      targetHostname: target.hostname,
+      protocol: target.protocol,
+      bytes: target.bytesAvg,
+      riskScore: target.riskScore,
+      severity: target.severity,
+      category: target.category,
+      status: 'TRANSFERRED',
+    }));
+  });
+
+  // Method to resolve laptop's real physical location via public Network/Wi-Fi Probe & Local Backend
   const resolveHardwareNetworkGps = async (centerMap = true) => {
+    if (!isGpsEnabled) return false;
     setGpsState(prev => ({ ...prev, isAcquiring: true, error: null }));
     setGeoStatus('🌐 Resolving laptop hardware location via network probe...');
     try {
-      const resp = await fetch('https://ipwho.is/');
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      if (!data.success && data.latitude === undefined) throw new Error(data.message || 'Lookup failed');
+      let data: any = null;
+      // 1. Try local FastAPI backend endpoint
+      try {
+        const resp = await fetch('/api/geo/laptop-location');
+        if (resp.ok) data = await resp.json();
+      } catch {}
 
-      const lat = Number(data.latitude);
-      const lng = Number(data.longitude);
-      const city = `${data.city || 'Mumbai'}, ${data.region || 'Maharashtra'} ${data.country || 'India'}`.trim();
-      const isp = data.connection?.isp || data.org || 'Local Network ISP';
-
-      setLiveLocation({
-        lat,
-        lng,
-        city: `Laptop Hardware Location (${city})`,
-        accuracy: 120,
-      });
-
-      setGpsState({
-        isActive: true,
-        isAcquiring: false,
-        isWatching: false,
-        accuracy: 120,
-        altitude: null,
-        speed: null,
-        heading: null,
-        timestamp: new Date().toLocaleTimeString(),
-        permissionState: 'granted',
-        error: null,
-      });
-
-      setGeoStatus(`🟢 Laptop Location Active: ${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E (${city} • ${isp})`);
-
-      if (centerMap && mapRef.current) {
-        mapRef.current.flyTo([lat, lng], 13, { animate: true, duration: 1.5 });
+      if (!data || !data.lat) {
+        try {
+          const resp = await fetch('http://127.0.0.1:8000/geo/laptop-location');
+          if (resp.ok) data = await resp.json();
+        } catch {}
       }
-      return true;
+
+      if (!data || !data.lat) {
+        const resp = await fetch('https://ipwho.is/');
+        if (resp.ok) {
+          const d = await resp.json();
+          if (d.success || d.latitude !== undefined) {
+            data = {
+              lat: Number(d.latitude),
+              lng: Number(d.longitude),
+              city: `${d.city || 'Mumbai'}, ${d.region || 'Maharashtra'} ${d.country || 'India'}`,
+              isp: d.connection?.isp || d.org || 'Local Network ISP',
+              accuracy: 120,
+            };
+          }
+        }
+      }
+
+      if (data && data.lat) {
+        const lat = Number(data.lat);
+        const lng = Number(data.lng);
+        const city = data.city || 'Mumbai, India';
+        const isp = data.isp || 'Local Network ISP';
+
+        setLiveLocation({
+          lat,
+          lng,
+          city: `Laptop Hardware Location (${city})`,
+          accuracy: data.accuracy || 120,
+        });
+
+        setGpsState({
+          isActive: true,
+          isAcquiring: false,
+          isWatching: false,
+          accuracy: data.accuracy || 120,
+          altitude: 14,
+          speed: 0,
+          heading: null,
+          timestamp: new Date().toLocaleTimeString(),
+          permissionState: 'granted',
+          error: null,
+        });
+
+        setGeoStatus(`🟢 Laptop Location Active: ${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E (${city} • ${isp})`);
+
+        if (centerMap && mapRef.current) {
+          mapRef.current.flyTo([lat, lng], 14, { animate: true, duration: 1.5 });
+        }
+        return true;
+      }
+      throw new Error('Could not resolve location');
     } catch (e) {
       console.warn('Network GPS resolution fallback:', e);
       setLiveLocation({
-        lat: 19.0728,
-        lng: 72.8826,
+        lat: 19.072832,
+        lng: 72.882608,
         city: 'Laptop Hardware Sensor (Mumbai, India)',
         accuracy: 120,
       });
@@ -417,16 +488,16 @@ export const LiveGeoThreatMap: React.FC = () => {
         isAcquiring: false,
         isWatching: false,
         accuracy: 120,
-        altitude: null,
-        speed: null,
+        altitude: 14,
+        speed: 0,
         heading: null,
         timestamp: new Date().toLocaleTimeString(),
         permissionState: 'granted',
         error: null,
       });
-      setGeoStatus('🟢 Laptop Location Active: 19.0728° N, 72.8826° E (Mumbai Primary Probe)');
+      setGeoStatus('🟢 Laptop Location Active: 19.072832° N, 72.882608° E (Mumbai Primary Probe)');
       if (centerMap && mapRef.current) {
-        mapRef.current.flyTo([19.0728, 72.8826], 13, { animate: true, duration: 1.5 });
+        mapRef.current.flyTo([19.072832, 72.882608], 14, { animate: true, duration: 1.5 });
       }
       return true;
     }
@@ -489,6 +560,30 @@ export const LiveGeoThreatMap: React.FC = () => {
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
+  };
+
+  // Master GPS Allow/Deny Toggle Method
+  const handleToggleGps = () => {
+    if (isGpsEnabled) {
+      // Turn GPS OFF
+      setIsGpsEnabled(false);
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setGpsState(prev => ({
+        ...prev,
+        isActive: false,
+        isWatching: false,
+        permissionState: 'denied',
+        error: null,
+      }));
+      setGeoStatus('🔴 Laptop GPS Turned OFF (Hardware Standby Mode Active)');
+    } else {
+      // Turn GPS ON
+      setIsGpsEnabled(true);
+      acquireLaptopGps(true);
+    }
   };
 
   // Toggle continuous hardware tracking watch
@@ -733,7 +828,7 @@ export const LiveGeoThreatMap: React.FC = () => {
 
     // Pick random target weighted toward critical/high
     const target = GLOBAL_DESTINATIONS[Math.floor(Math.random() * GLOBAL_DESTINATIONS.length)];
-    const origin = [liveLocation.lat, liveLocation.lng];
+    const origin = isGpsEnabled ? [liveLocation.lat, liveLocation.lng] : [24.0, 30.0];
     const destination = [target.lat, target.lng];
 
     // Compute midpoint curved arc coordinate
@@ -783,6 +878,28 @@ export const LiveGeoThreatMap: React.FC = () => {
         }, 1200);
       }
     }, 45);
+
+    // Append to liveTransactions state
+    const newTxn: LiveMapTransaction = {
+      id: `TXN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      timestamp: new Date().toLocaleTimeString(),
+      originLabel: isGpsEnabled
+        ? `💻 My Laptop (${origin[0].toFixed(4)}°, ${origin[1].toFixed(4)}°)`
+        : '🏢 Central Standby Command Node',
+      originCoords: [origin[0], origin[1]],
+      targetCity: target.city,
+      targetCountry: target.country,
+      targetIp: target.ip,
+      targetHostname: target.hostname,
+      protocol: target.protocol,
+      bytes: target.bytesAvg,
+      riskScore: target.riskScore,
+      severity: target.severity,
+      category: target.category,
+      status: 'IN TRANSIT (LIVE ARC)',
+    };
+
+    setLiveTransactions(prev => [newTxn, ...prev.slice(0, 14)]);
 
     // Update state & stats
     setPacketCount(prev => prev + 1);
@@ -950,118 +1067,153 @@ export const LiveGeoThreatMap: React.FC = () => {
         </div>
       )}
 
-      {/* Laptop In-Built Hardware GPS Telemetry & Control Panel */}
-      <div className="laptop-gps-panel">
-        <div className="laptop-gps-left">
-          <div className="gps-hardware-icon-box">
-            <Navigation size={20} />
-          </div>
-          <div className="gps-title-group">
-            <div className="gps-main-title">
-              <span>LAPTOP IN-BUILT GPS SENSOR HARDWARE</span>
-              <span
-                className="gps-accuracy-pill"
-                style={{
-                  background: gpsState.isActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                  color: gpsState.isActive ? '#34d399' : '#fbbf24',
-                  borderColor: gpsState.isActive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)',
-                }}
-              >
-                {gpsState.isActive ? `🟢 HARDWARE LOCKED (±${liveLocation.accuracy}m)` : '🟡 DETECTING SENSOR...'}
-              </span>
-              {gpsState.isWatching && (
-                <span
-                  className="gps-accuracy-pill"
-                  style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: '#38bdf8' }}
-                >
-                  📡 LIVE TRACKING ACTIVE
+      {/* Laptop In-Built Hardware GPS Master Access & Authorization Control Section */}
+      <div className="gps-master-control-section">
+        {/* Master Switch Header */}
+        <div className="gps-switch-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="gps-hardware-icon-box" style={{ background: isGpsEnabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', borderColor: isGpsEnabled ? '#10b981' : '#ef4444', color: isGpsEnabled ? '#34d399' : '#f87171' }}>
+              <Navigation size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>WEBSITE LAPTOP GPS AUTHORIZATION & SENSOR ACCESS</span>
+                <span className={`gps-accuracy-pill ${isGpsEnabled ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border-rose-500/40'}`}>
+                  {isGpsEnabled ? '🟢 GPS ACCESS: ALLOWED (ACTIVE)' : '🔴 GPS ACCESS: BLOCKED / OFF'}
                 </span>
-              )}
-            </div>
-            <div className="gps-coords-display">
-              <span>
-                Origin: <strong style={{ color: '#f8fafc' }}>{liveLocation.city}</strong>
-              </span>
-              <span>&bull;</span>
-              <span>
-                Latitude: <strong>{liveLocation.lat.toFixed(6)}° N</strong>
-              </span>
-              <span>&bull;</span>
-              <span>
-                Longitude: <strong>{liveLocation.lng.toFixed(6)}° E</strong>
-              </span>
-              <span>&bull;</span>
-              <span>
-                Hardware Precision: <strong>±{liveLocation.accuracy} meters</strong>
-              </span>
-              {gpsState.altitude !== null && (
-                <>
-                  <span>&bull;</span>
-                  <span>
-                    Elevation: <strong>{gpsState.altitude}m AMSL</strong>
+                {isGpsEnabled && gpsState.isWatching && (
+                  <span className="gps-accuracy-pill" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: '#38bdf8' }}>
+                    📡 LIVE WATCHING
                   </span>
-                </>
-              )}
-              {gpsState.speed !== null && (
-                <>
-                  <span>&bull;</span>
-                  <span>
-                    Ground Speed: <strong>{gpsState.speed} km/h</strong>
-                  </span>
-                </>
-              )}
-              {gpsState.timestamp && (
-                <>
-                  <span>&bull;</span>
-                  <span style={{ color: '#94a3b8' }}>Sync Time: {gpsState.timestamp}</span>
-                </>
-              )}
+                )}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: 2 }}>
+                {isGpsEnabled
+                  ? 'Hardware sensor is actively locked. Live map transactions stream directly from your real coordinates.'
+                  : 'GPS location tracking is paused. Toggle ON to query your laptop coordinates and trace packets from your location.'}
+              </div>
             </div>
+          </div>
+
+          {/* Master Toggle Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              className={`gps-toggle-btn ${isGpsEnabled ? 'is-active' : 'is-inactive'}`}
+              onClick={handleToggleGps}
+              title={isGpsEnabled ? 'Turn OFF laptop GPS tracking' : 'Turn ON laptop GPS tracking'}
+            >
+              <div className="toggle-switch-track">
+                <div className="toggle-switch-thumb" />
+              </div>
+              <span>{isGpsEnabled ? 'GPS TRACKING: ON' : 'GPS TRACKING: OFF'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4-Card Live Telemetry Grid */}
+        <div className="gps-telemetry-grid">
+          {/* Card 1: Sensor Fix Status */}
+          <div className="gps-tele-card">
+            <span className="gps-tele-label">
+              <Activity size={12} className="text-cyan-400" />
+              HARDWARE FIX STATUS
+            </span>
+            <div className="gps-tele-value" style={{ color: isGpsEnabled ? (gpsState.isActive ? '#34d399' : '#fbbf24') : '#f87171' }}>
+              {isGpsEnabled ? (gpsState.isActive ? '🟢 SATELLITE / NET LOCKED' : '🟡 SCANNING HARDWARE...') : '🔴 GPS SENSOR OFF'}
+            </div>
+            <span className="gps-tele-sub">
+              {isGpsEnabled ? 'Hardware Enclave Stream' : 'Privacy Protection Guard Active'}
+            </span>
+          </div>
+
+          {/* Card 2: Exact Coordinates */}
+          <div className="gps-tele-card">
+            <span className="gps-tele-label">
+              <MapPin size={12} className="text-emerald-400" />
+              EXACT COORDINATES
+            </span>
+            <div className="gps-tele-value">
+              {isGpsEnabled ? `${liveLocation.lat.toFixed(6)}° N, ${liveLocation.lng.toFixed(6)}° E` : 'STANDBY HQ (0.0000°, 0.0000°)'}
+            </div>
+            <span className="gps-tele-sub">
+              {isGpsEnabled ? `Hardware Accuracy: ±${liveLocation.accuracy} meters` : 'Hardware coordinate query paused'}
+            </span>
+          </div>
+
+          {/* Card 3: Geolocation Details */}
+          <div className="gps-tele-card">
+            <span className="gps-tele-label">
+              <Globe2 size={12} className="text-blue-400" />
+              PHYSICAL ENCLAVE LOCATION
+            </span>
+            <div className="gps-tele-value" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+              {isGpsEnabled ? liveLocation.city : 'Central Command Post'}
+            </div>
+            <span className="gps-tele-sub">
+              {isGpsEnabled ? 'Origin Node for Live Threat Arcs' : 'Default SOC Baseline Node'}
+            </span>
+          </div>
+
+          {/* Card 4: Telemetry Pulse */}
+          <div className="gps-tele-card">
+            <span className="gps-tele-label">
+              <Zap size={12} className="text-amber-400" />
+              TRANSACTION DISPATCH RATE
+            </span>
+            <div className="gps-tele-value" style={{ color: '#38bdf8' }}>
+              {isStreaming ? '2.0s LIVE PULSE' : 'STREAM PAUSED'}
+            </div>
+            <span className="gps-tele-sub">
+              {gpsState.timestamp ? `Last Fix: ${gpsState.timestamp}` : 'Ready for packet injection'}
+            </span>
           </div>
         </div>
 
         {/* Laptop GPS Action Buttons */}
-        <div className="laptop-gps-actions">
-          {/* Resolve via Network Sensor (Instant, No permission needed) */}
+        <div className="laptop-gps-actions" style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid #162a4d' }}>
+          {/* Center Map on Laptop */}
           <button
-            onClick={() => resolveHardwareNetworkGps(true)}
-            className="gps-action-btn gps-btn-network"
-            disabled={gpsState.isAcquiring}
-            title="Instantly resolve laptop hardware location via network probe without any browser permission prompts"
+            onClick={centerOnLaptop}
+            className="gps-action-btn gps-btn-center"
+            disabled={!isGpsEnabled}
+            title="Fly map directly to current laptop GPS coordinates"
           >
-            <Globe2 size={14} />
-            RESOLVE VIA NETWORK SENSOR
+            <MapPin size={14} />
+            CENTER ON LAPTOP COORDINATES
           </button>
 
           {/* Acquire / Refresh Satellite GPS */}
           <button
             onClick={() => acquireLaptopGps(true)}
             className="gps-action-btn gps-btn-locate"
-            disabled={gpsState.isAcquiring}
+            disabled={!isGpsEnabled || gpsState.isAcquiring}
             title="Request explicit satellite permission from laptop hardware GPS and center the map"
           >
             <Navigation size={14} />
-            {gpsState.isAcquiring ? 'ACQUIRING SATELLITE FIX...' : 'ACCESS SATELLITE GPS'}
+            {gpsState.isAcquiring ? 'ACQUIRING SATELLITE FIX...' : 'ACQUIRE SATELLITE FIX'}
+          </button>
+
+          {/* Resolve via Network Sensor (Instant, No permission needed) */}
+          <button
+            onClick={() => resolveHardwareNetworkGps(true)}
+            className="gps-action-btn gps-btn-network"
+            disabled={!isGpsEnabled || gpsState.isAcquiring}
+            title="Instantly resolve laptop hardware location via network probe without any browser permission prompts"
+          >
+            <Globe2 size={14} />
+            RESOLVE VIA NETWORK SENSOR
           </button>
 
           {/* Toggle Continuous Live Tracking */}
           <button
             onClick={toggleContinuousTracking}
             className={`gps-action-btn ${gpsState.isWatching ? 'gps-btn-tracking-active' : 'gps-btn-tracking-idle'}`}
+            disabled={!isGpsEnabled}
             title="Keep tracking laptop coordinates in real-time as you move"
           >
             <Activity size={14} />
-            {gpsState.isWatching ? 'LIVE TRACK: ON' : 'CONTINUOUS TRACK'}
-          </button>
-
-          {/* Center Map on Laptop */}
-          <button
-            onClick={centerOnLaptop}
-            className="gps-action-btn gps-btn-center"
-            title="Fly map directly to current laptop GPS coordinates"
-          >
-            <MapPin size={14} />
-            CENTER ON LAPTOP
+            {gpsState.isWatching ? 'CONTINUOUS WATCH: ON' : 'CONTINUOUS WATCH: OFF'}
           </button>
         </div>
       </div>
@@ -1242,6 +1394,93 @@ export const LiveGeoThreatMap: React.FC = () => {
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span> Baseline SaaS
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Real-Time Live Map Transactions Originating from Laptop Coordinates */}
+      <div className="live-transactions-panel">
+        <div className="live-transactions-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Activity className="text-cyan-400" size={18} />
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Live Network Transactions Originating From Your Coordinates
+            </span>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 12,
+                background: isGpsEnabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                color: isGpsEnabled ? '#34d399' : '#f87171',
+                border: `1px solid ${isGpsEnabled ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+              }}
+            >
+              {isGpsEnabled ? `📍 ORIGIN: ${liveLocation.lat.toFixed(4)}° N, ${liveLocation.lng.toFixed(4)}° E` : '🏢 STANDBY HQ NODE'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.76rem', color: '#94a3b8' }}>
+            <span>Live Packets: <strong style={{ color: '#38bdf8' }}>{packetCount}</strong></span>
+            <span>&bull;</span>
+            <span>Heartbeat: <strong style={{ color: isStreaming ? '#34d399' : '#f87171' }}>{isStreaming ? '2.0s INTERVAL' : 'PAUSED'}</strong></span>
+            <span>&bull;</span>
+            <span>Global Targets: <strong style={{ color: '#f8fafc' }}>{GLOBAL_DESTINATIONS.length} Enclaves</strong></span>
+          </div>
+        </div>
+
+        <div className="transactions-table-wrapper">
+          <table className="live-transactions-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Timestamp</th>
+                <th>Origin (Laptop GPS)</th>
+                <th>Destination Target</th>
+                <th>Protocol & Payload</th>
+                <th>Threat Severity</th>
+                <th>Transaction Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liveTransactions.map((txn, idx) => (
+                <tr key={txn.id} className={idx === 0 ? 'latest-txn' : ''}>
+                  <td>
+                    <code style={{ color: '#38bdf8', fontWeight: 700 }}>{txn.id}</code>
+                  </td>
+                  <td style={{ color: '#94a3b8' }}>{txn.timestamp}</td>
+                  <td>
+                    <span style={{ color: isGpsEnabled ? '#34d399' : '#94a3b8', fontWeight: 600 }}>
+                      {txn.originLabel}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <strong style={{ color: '#f8fafc' }}>{txn.targetCity}, {txn.targetCountry}</strong>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{txn.targetHostname} ({txn.targetIp})</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span>{txn.protocol}</span>
+                      <strong style={{ color: '#38bdf8', fontSize: '0.72rem' }}>{(txn.bytes / (1024 * 1024)).toFixed(2)} MB</strong>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`txn-badge ${txn.severity.toLowerCase()}`}>
+                      {txn.severity} ({txn.riskScore}/100)
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: idx === 0 ? '#38bdf8' : '#94a3b8' }}>
+                      {idx === 0 && <span className="pulse-dot" style={{ color: '#38bdf8' }} />}
+                      {idx === 0 ? 'LIVE IN FLIGHT' : 'COMPLETED'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

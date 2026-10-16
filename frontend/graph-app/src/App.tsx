@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkspaceView } from './components/WorkspaceView';
+import { AuthView, UserSession } from './components/AuthView';
 
 // Default mock elements when backend is spinning up or offline
 export const DEFAULT_FALLBACK_ELEMENTS = {
@@ -25,6 +26,16 @@ export const DEFAULT_FALLBACK_ELEMENTS = {
 export const App: React.FC = () => {
   const [elements, setElements] = useState(DEFAULT_FALLBACK_ELEMENTS);
   const [apiConnected, setApiConnected] = useState<boolean>(false);
+
+  // Authenticated user session state backed by localStorage
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
+    try {
+      const stored = localStorage.getItem('ciphersentinel_user') || sessionStorage.getItem('ciphersentinel_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Fetch live elements from backend
   const fetchGraphElements = async () => {
@@ -56,11 +67,32 @@ export const App: React.FC = () => {
     fetchGraphElements();
   }, []);
 
+  const handleLoginSuccess = (user: UserSession) => {
+    setCurrentUser(user);
+    fetchGraphElements();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('ciphersentinel_user');
+    localStorage.removeItem('ciphersentinel_token');
+    sessionStorage.removeItem('ciphersentinel_user');
+    sessionStorage.removeItem('ciphersentinel_token');
+    setCurrentUser(null);
+  };
+
+  // If not authenticated, render Login / Registration Enclave
+  if (!currentUser) {
+    return <AuthView onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // Once authenticated, render full Workspace Suite
   return (
     <WorkspaceView
       graphElements={elements}
       onRefreshGraph={fetchGraphElements}
       apiConnected={apiConnected}
+      currentUser={currentUser}
+      onLogout={handleLogout}
     />
   );
 };

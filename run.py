@@ -25,6 +25,11 @@ if not VENV_PYTHON.exists():
 else:
     PYTHON_EXE = str(VENV_PYTHON)
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 
 def check_api_ready(timeout=10):
@@ -77,6 +82,7 @@ def main():
             "0.0.0.0",
             "--port",
             "8000",
+            "--reload",
         ],
         cwd=str(ROOT_DIR),
         env=env,

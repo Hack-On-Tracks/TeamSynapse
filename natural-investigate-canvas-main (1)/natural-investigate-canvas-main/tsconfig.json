@@ -14,6 +14,7 @@
     "verbatimModuleSyntax": false,
     "noEmit": true,
 
+    "types": [],
     "skipLibCheck": true,
     "strict": false,
     "noImplicitAny": false,

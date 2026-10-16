@@ -21,14 +21,18 @@ class UserCreate(BaseModel):
     username: str
     password: str
     full_name: Optional[str] = ""
+    email: Optional[str] = ""
     role: Optional[str] = "analyst"
 
 class UserResponse(BaseModel):
     id: str
     username: str
     full_name: str
+    email: Optional[str] = ""
     role: str
     created_at: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = "bearer"
 
 def get_db():
     db = UsersDatabase()
@@ -80,15 +84,55 @@ def login_for_access_token(form_data: UserLogin, request: Request, db: UsersData
     }
 
 @router.post("/register", response_model=UserResponse)
-def register_user(req: UserCreate, db: UsersDatabase = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    # Restrict registration to admins
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only administrators can create users")
+def register_user(req: UserCreate, request: Request, db: UsersDatabase = Depends(get_db)):
+    username = (req.username or "").strip()
+    if len(username) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username must be at least 3 characters",
+        )
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters",
+        )
+
+    # Allowed roles for self-registration: analyst, operator, viewer, admin
+    role = req.role if req.role in ["analyst", "operator", "viewer", "admin"] else "analyst"
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
     try:
-        created = db.create_user(req.username, req.password, req.full_name or "", req.role or "analyst")
-        db.log_audit_event("USER_CREATE", current_user["username"], "SUCCESS", f"Created user {req.username}")
+        created = db.create_user(
+            username=username,
+            password=req.password,
+            full_name=req.full_name or username.capitalize(),
+            role=role,
+            email=req.email or f"{username}@ciphersentinel.soc",
+        )
+        db.log_audit_event(
+            "USER_REGISTER",
+            username,
+            "SUCCESS",
+            "Self-registered operator account into local SQLite (data/users.db)",
+            ip_address=client_ip,
+        )
+
+        access_token_expires = timedelta(minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")))
+        access_token = create_access_token(
+            data={"sub": created["username"], "role": created["role"]},
+            expires_delta=access_token_expires,
+        )
+        created["access_token"] = access_token
+        created["token_type"] = "bearer"
         return created
     except ValueError as e:
+        db.log_audit_event(
+            "USER_REGISTER_FAIL",
+            username,
+            "FAILURE",
+            str(e),
+            ip_address=client_ip,
+        )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.get("/me")
